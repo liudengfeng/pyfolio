@@ -131,7 +131,7 @@ def axes_style(style='darkgrid', rc=None):
     if rc is None:
         rc = {}
 
-    rc_default = {}
+    rc_default = {"font.sans-serif":['simhei', 'Arial']}
 
     # Add defaults if they do not exist
     for name, val in rc_default.items():

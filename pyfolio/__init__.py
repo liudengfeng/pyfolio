@@ -22,7 +22,7 @@ except ImportError:
         ImportWarning)
 
 
-__version__ = get_versions()['version']
+__version__ = '0.9.0' # get_versions()['version']
 del get_versions
 
 __all__ = ['utils', 'timeseries', 'pos', 'txn', 'bayesian',
