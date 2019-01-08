@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import division
-
+import os
 import warnings
 from time import time
 
@@ -34,8 +34,11 @@ from . import risk
 from . import round_trips
 from . import timeseries
 from . import txn
+
 from . import utils
 
+# MKL 要求
+os.environ.setdefault('MKL_THREADING_LAYER', 'GNU')
 try:
     from . import bayesian
     have_bayesian = True
@@ -58,7 +61,7 @@ FACTOR_PARTITIONS = {
 def timer(msg_body, previous_time):
     current_time = time()
     run_time = current_time - previous_time
-    message = "\nFinished " + msg_body + " (required {:.2f} seconds)."
+    message = "\n完成 " + msg_body + " (用时 {:.2f} 秒)."
     print(message.format(run_time))
 
     return current_time

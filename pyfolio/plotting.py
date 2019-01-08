@@ -176,9 +176,9 @@ def plot_monthly_returns_heatmap(returns, ax=None, **kwargs):
         cbar=False,
         cmap=matplotlib.cm.RdYlGn,
         ax=ax, **kwargs)
-    ax.set_ylabel('Year')
-    ax.set_xlabel('Month')
-    ax.set_title("Monthly returns (%)")
+    ax.set_ylabel('年')
+    ax.set_xlabel('月')
+    ax.set_title("月度收益率(%)")
     return ax
 
 
@@ -225,10 +225,10 @@ def plot_annual_returns(returns, ax=None, **kwargs):
      ).plot(ax=ax, kind='barh', alpha=0.70, **kwargs)
     ax.axvline(0.0, color='black', linestyle='-', lw=3)
 
-    ax.set_ylabel('Year')
-    ax.set_xlabel('Returns')
-    ax.set_title("Annual returns")
-    ax.legend(['Mean'], frameon=True, framealpha=0.5)
+    ax.set_ylabel('年')
+    ax.set_xlabel('收益率')
+    ax.set_title("年度收益率")
+    ax.legend(['平均值'], frameon=True, framealpha=0.5)
     return ax
 
 
@@ -276,10 +276,10 @@ def plot_monthly_returns_dist(returns, ax=None, **kwargs):
         alpha=1.0)
 
     ax.axvline(0.0, color='black', linestyle='-', lw=3, alpha=0.75)
-    ax.legend(['Mean'], frameon=True, framealpha=0.5)
-    ax.set_ylabel('Number of months')
-    ax.set_xlabel('Returns')
-    ax.set_title("Distribution of monthly returns")
+    ax.legend(['平均值'], frameon=True, framealpha=0.5)
+    ax.set_ylabel('月数')
+    ax.set_xlabel('收益率')
+    ax.set_title("月度收益率分布")
     return ax
 
 
@@ -330,15 +330,15 @@ def plot_holdings(returns, positions, legend_loc='best', ax=None, **kwargs):
 
     ax.set_xlim((returns.index[0], returns.index[-1]))
 
-    leg = ax.legend(['Daily holdings',
-                     'Average daily holdings, by month',
-                     'Average daily holdings, overall'],
+    leg = ax.legend(['日市值',
+                     '月平均市值',
+                     '整体平均市值'],
                     loc=legend_loc, frameon=True,
                     framealpha=0.5)
     leg.get_frame().set_edgecolor('black')
 
-    ax.set_title('Total holdings')
-    ax.set_ylabel('Holdings')
+    ax.set_title('总持仓市值')
+    ax.set_ylabel('市值')
     ax.set_xlabel('')
     return ax
 
@@ -394,8 +394,8 @@ def plot_long_short_holdings(returns, positions,
     leg.get_frame().set_edgecolor('black')
 
     ax.set_xlim((returns.index[0], returns.index[-1]))
-    ax.set_title('Long and short holdings')
-    ax.set_ylabel('Holdings')
+    ax.set_title('多头与空头总市值')
+    ax.set_ylabel('市值')
     ax.set_xlabel('')
     return ax
 
@@ -445,9 +445,9 @@ def plot_drawdown_periods(returns, top=10, ax=None, **kwargs):
                         alpha=.4,
                         color=colors[i])
     ax.set_ylim(lim)
-    ax.set_title('Top %i drawdown periods' % top)
-    ax.set_ylabel('Cumulative returns')
-    ax.legend(['Portfolio'], loc='upper left',
+    ax.set_title('%i个最大回撤周期' % top)
+    ax.set_ylabel('累积收益率')
+    ax.legend(['投资组合'], loc='upper left',
               frameon=True, framealpha=0.5)
     ax.set_xlabel('')
     return ax
@@ -484,8 +484,8 @@ def plot_drawdown_underwater(returns, ax=None, **kwargs):
     running_max = np.maximum.accumulate(df_cum_rets)
     underwater = -100 * ((running_max - df_cum_rets) / running_max)
     (underwater).plot(ax=ax, kind='area', color='coral', alpha=0.7, **kwargs)
-    ax.set_ylabel('Drawdown')
-    ax.set_title('Underwater plot')
+    ax.set_ylabel('亏损')
+    ax.set_title('亏损图')
     ax.set_xlabel('')
     return ax
 
@@ -634,9 +634,9 @@ def show_perf_stats(returns, factor_returns=None, positions=None,
                                                     APPROX_BDAYS_PER_MONTH)
 
         perf_stats = pd.concat(OrderedDict([
-            ('In-sample', perf_stats_is),
-            ('Out-of-sample', perf_stats_oos),
-            ('All', perf_stats_all),
+            ('样本内', perf_stats_is),
+            ('样本外', perf_stats_oos),
+            ('全部', perf_stats_all),
         ]), axis=1)
     else:
         if len(returns.index) > 0:
@@ -694,7 +694,7 @@ def plot_returns(returns,
         ax = plt.gca()
 
     ax.set_label('')
-    ax.set_ylabel('Returns')
+    ax.set_ylabel('收益率')
 
     if live_start_date is not None:
         live_start_date = ep.utils.get_utc_timestamp(live_start_date)
@@ -774,7 +774,7 @@ def plot_rolling_returns(returns,
         ax = plt.gca()
 
     ax.set_xlabel('')
-    ax.set_ylabel('Cumulative returns')
+    ax.set_ylabel('累积收益率')
     ax.set_yscale('log' if logy else 'linear')
 
     if volatility_match and factor_returns is None:
@@ -869,7 +869,7 @@ def plot_rolling_beta(returns, factor_returns, legend_loc='best',
     y_axis_formatter = FuncFormatter(utils.two_dec_places)
     ax.yaxis.set_major_formatter(FuncFormatter(y_axis_formatter))
 
-    ax.set_title("Rolling portfolio beta to " + str(factor_returns.name))
+    ax.set_title(f"相对于{str(factor_returns.name)}的投资组合滚动Beta")
     ax.set_ylabel('Beta')
     rb_1 = timeseries.rolling_beta(
         returns, factor_returns, rolling_window=APPROX_BDAYS_PER_MONTH * 6)
@@ -881,8 +881,8 @@ def plot_rolling_beta(returns, factor_returns, legend_loc='best',
     ax.axhline(0.0, color='black', linestyle='-', lw=2)
 
     ax.set_xlabel('')
-    ax.legend(['6-mo',
-               '12-mo'],
+    ax.legend(['6个月',
+               '12个月'],
               loc=legend_loc, frameon=True, framealpha=0.5)
     ax.set_ylim((-1.0, 1.0))
     return ax
@@ -934,7 +934,7 @@ def plot_rolling_volatility(returns, factor_returns=None,
         rolling_vol_ts_factor.plot(alpha=.7, lw=3, color='grey', ax=ax,
                                    **kwargs)
 
-    ax.set_title('Rolling volatility (6-month)')
+    ax.set_title('滚动波动(6个月)')
     ax.axhline(
         rolling_vol_ts.mean(),
         color='steelblue',
@@ -943,13 +943,13 @@ def plot_rolling_volatility(returns, factor_returns=None,
 
     ax.axhline(0.0, color='black', linestyle='-', lw=2)
 
-    ax.set_ylabel('Volatility')
+    ax.set_ylabel('波动')
     ax.set_xlabel('')
     if factor_returns is None:
-        ax.legend(['Volatility', 'Average volatility'],
+        ax.legend(['波动', '平均波动'],
                   loc=legend_loc, frameon=True, framealpha=0.5)
     else:
-        ax.legend(['Volatility', 'Benchmark volatility', 'Average volatility'],
+        ax.legend(['波动', '基准波动', '平均波动'],
                   loc=legend_loc, frameon=True, framealpha=0.5)
     return ax
 
@@ -1002,7 +1002,7 @@ def plot_rolling_sharpe(returns, factor_returns=None,
         rolling_sharpe_ts_factor.plot(alpha=.7, lw=3, color='grey', ax=ax,
                                       **kwargs)
 
-    ax.set_title('Rolling Sharpe ratio (6-month)')
+    ax.set_title('滚动夏普比率(6个月)')
     ax.axhline(
         rolling_sharpe_ts.mean(),
         color='steelblue',
@@ -1010,13 +1010,13 @@ def plot_rolling_sharpe(returns, factor_returns=None,
         lw=3)
     ax.axhline(0.0, color='black', linestyle='-', lw=3)
 
-    ax.set_ylabel('Sharpe ratio')
+    ax.set_ylabel('夏普比率')
     ax.set_xlabel('')
     if factor_returns is None:
-        ax.legend(['Sharpe', 'Average'],
+        ax.legend(['夏普', '平均值'],
                   loc=legend_loc, frameon=True, framealpha=0.5)
     else:
-        ax.legend(['Sharpe', 'Benchmark Sharpe', 'Average'],
+        ax.legend(['夏普', '基准夏普', '平均值'],
                   loc=legend_loc, frameon=True, framealpha=0.5)
 
     return ax
@@ -1055,8 +1055,8 @@ def plot_gross_leverage(returns, positions, ax=None, **kwargs):
 
     ax.axhline(gl.mean(), color='g', linestyle='--', lw=3)
 
-    ax.set_title('Gross leverage')
-    ax.set_ylabel('Gross leverage')
+    ax.set_title('总杠杆率')
+    ax.set_ylabel('总杠杆率')
     ax.set_xlabel('')
     return ax
 
@@ -1104,8 +1104,8 @@ def plot_exposures(returns, positions, ax=None, **kwargs):
             label='Net', color='black', linestyle='dotted')
 
     ax.set_xlim((returns.index[0], returns.index[-1]))
-    ax.set_title("Exposure")
-    ax.set_ylabel('Exposure')
+    ax.set_title("敞口")
+    ax.set_ylabel('敞口')
     ax.legend(loc='lower left', frameon=True, framealpha=0.5)
     ax.set_xlabel('')
     return ax
@@ -1154,15 +1154,15 @@ def show_and_plot_top_positions(returns, positions_alloc,
     if show_and_plot == 1 or show_and_plot == 2:
         utils.print_table(pd.DataFrame(df_top_long * 100, columns=['max']),
                           float_format='{0:.2f}%'.format,
-                          name='Top 10 long positions of all time')
+                          name='所有时段前10名**多头**头寸')
 
         utils.print_table(pd.DataFrame(df_top_short * 100, columns=['max']),
                           float_format='{0:.2f}%'.format,
-                          name='Top 10 short positions of all time')
+                          name='所有时段前10名**空头**头寸')
 
         utils.print_table(pd.DataFrame(df_top_abs * 100, columns=['max']),
                           float_format='{0:.2f}%'.format,
-                          name='Top 10 positions of all time')
+                          name='所有时段前10名头寸')
 
     if show_and_plot == 0 or show_and_plot == 2:
 
@@ -1170,7 +1170,7 @@ def show_and_plot_top_positions(returns, positions_alloc,
             ax = plt.gca()
 
         positions_alloc[df_top_abs.index].plot(
-            title='Portfolio allocation over time, only top 10 holdings',
+            title='随时间推移的投资组合分配，只显示市值前10名',
             alpha=0.5, ax=ax, **kwargs)
 
         # Place legend below plot, shrink plot by 20%
@@ -1186,7 +1186,7 @@ def show_and_plot_top_positions(returns, positions_alloc,
             ax.legend(loc=legend_loc)
 
         ax.set_xlim((returns.index[0], returns.index[-1]))
-        ax.set_ylabel('Exposure by holding')
+        ax.set_ylabel('市值敞口')
 
         if hide_positions:
             ax.legend_.remove()
@@ -1220,8 +1220,8 @@ def plot_max_median_position_concentration(positions, ax=None, **kwargs):
     alloc_summary.plot(linewidth=1, color=colors, alpha=0.6, ax=ax)
 
     ax.legend(loc='center left', frameon=True, framealpha=0.5)
-    ax.set_ylabel('Exposure')
-    ax.set_title('Long/short max and median position concentration')
+    ax.set_ylabel('敞口')
+    ax.set_title('多头/空头 最大及中位数头寸集中度')
 
     return ax
 
@@ -1313,11 +1313,11 @@ def plot_return_quantiles(returns, live_start_date=None, ax=None, **kwargs):
                       color="red",
                       marker="d", **kwargs)
         red_dots = matplotlib.lines.Line2D([], [], color="red", marker="d",
-                                           label="Out-of-sample data",
+                                           label="样本外数据",
                                            linestyle='')
         ax.legend(handles=[red_dots], frameon=True, framealpha=0.5)
-    ax.set_xticklabels(['Daily', 'Weekly', 'Monthly'])
-    ax.set_title('Return quantiles')
+    ax.set_xticklabels(['每日', '每周', '每月'])
+    ax.set_title('收益率分位数')
 
     return ax
 
@@ -1374,14 +1374,14 @@ def plot_turnover(returns, transactions, positions,
         **kwargs)
     ax.axhline(
         df_turnover.mean(), color='steelblue', linestyle='--', lw=3, alpha=1.0)
-    ax.legend(['Daily turnover',
-               'Average daily turnover, by month',
-               'Average daily turnover, net'],
+    ax.legend(['日换手率',
+               '月平均换手率',
+               '平均净换手率'],
               loc=legend_loc, frameon=True, framealpha=0.5)
-    ax.set_title('Daily turnover')
+    ax.set_title('日换手率')
     ax.set_xlim((returns.index[0], returns.index[-1]))
     ax.set_ylim((0, 2))
-    ax.set_ylabel('Turnover')
+    ax.set_ylabel('换手率')
     ax.set_xlabel('')
     return ax
 
@@ -1429,7 +1429,7 @@ def plot_slippage_sweep(returns, positions, transactions,
 
     slippage_sweep.plot(alpha=1.0, lw=0.5, ax=ax)
 
-    ax.set_title('Cumulative returns given additional per-dollar slippage')
+    ax.set_title('给定额外每元滑点下的累积收益率')
     ax.set_ylabel('')
 
     ax.legend(loc='center left', frameon=True, framealpha=0.5)
@@ -1476,10 +1476,10 @@ def plot_slippage_sensitivity(returns, positions, transactions,
 
     avg_returns_given_slippage.plot(alpha=1.0, lw=2, ax=ax)
 
-    ax.set_title('Average annual returns given additional per-dollar slippage')
+    ax.set_title('给定额外每元滑点下的平均年收益率')
     ax.set_xticks(np.arange(0, 100, 10))
-    ax.set_ylabel('Average annual return')
-    ax.set_xlabel('Per-dollar slippage (bps)')
+    ax.set_ylabel('平均年收益率')
+    ax.set_xlabel('每元滑点(bps)')
 
     return ax
 
@@ -1509,9 +1509,9 @@ def plot_capacity_sweep(returns, transactions, market_data,
         ax = plt.gca()
 
     captial_base_sweep.plot(ax=ax)
-    ax.set_xlabel('Capital base ($mm)')
-    ax.set_ylabel('Sharpe ratio')
-    ax.set_title('Capital base performance sweep')
+    ax.set_xlabel('基础投资($mm)')
+    ax.set_ylabel('夏普比率')
+    ax.set_title('投资业绩扫描')
 
     return ax
 
@@ -1544,8 +1544,8 @@ def plot_daily_turnover_hist(transactions, positions,
         ax = plt.gca()
     turnover = txn.get_turnover(positions, transactions)
     sns.distplot(turnover, ax=ax, **kwargs)
-    ax.set_title('Distribution of daily turnover rates')
-    ax.set_xlabel('Turnover rate')
+    ax.set_title('每日换手比率分布')
+    ax.set_xlabel('换手比率')
     return ax
 
 
@@ -1580,9 +1580,9 @@ def plot_daily_volume(returns, transactions, ax=None, **kwargs):
     daily_txn.txn_shares.plot(alpha=1.0, lw=0.5, ax=ax, **kwargs)
     ax.axhline(daily_txn.txn_shares.mean(), color='steelblue',
                linestyle='--', lw=3, alpha=1.0)
-    ax.set_title('Daily trading volume')
+    ax.set_title('每日交易量')
     ax.set_xlim((returns.index[0], returns.index[-1]))
-    ax.set_ylabel('Amount of shares traded')
+    ax.set_ylabel('交易的股票金额')
     ax.set_xlabel('')
     return ax
 
@@ -1639,8 +1639,8 @@ def plot_txn_time_hist(transactions, bin_minutes=5, tz='America/New_York',
     ax.set_xlim(570, 960)
     ax.set_xticks(txn_time.index[::int(30 / bin_minutes)])
     ax.set_xticklabels(txn_time.time_str[::int(30 / bin_minutes)])
-    ax.set_title('Transaction time distribution')
-    ax.set_ylabel('Proportion')
+    ax.set_title('交易时间分布')
+    ax.set_ylabel('比例')
     ax.set_xlabel('')
     return ax
 
@@ -1766,8 +1766,8 @@ def plot_round_trip_lifetimes(round_trips, disp_amount=16, lsize=18, ax=None):
     ax.set_yticklabels([utils.format_asset(s) for s in sample])
 
     ax.set_ylim((-0.5, min(len(sample), disp_amount) - 0.5))
-    blue = patches.Rectangle([0, 0], 1, 1, color='b', label='Long')
-    red = patches.Rectangle([0, 0], 1, 1, color='r', label='Short')
+    blue = patches.Rectangle([0, 0], 1, 1, color='b', label='多头')
+    red = patches.Rectangle([0, 0], 1, 1, color='r', label='空头')
     leg = ax.legend(handles=[blue, red], loc='lower left',
                     frameon=True, framealpha=0.5)
     leg.get_frame().set_edgecolor('black')
@@ -1849,8 +1849,8 @@ def plot_prob_profit_trade(round_trips, ax=None):
     ax.axvline(lower_perc, color='0.5')
     ax.axvline(upper_perc, color='0.5')
 
-    ax.set_xlabel('Probability of making a profitable decision')
-    ax.set_ylabel('Belief')
+    ax.set_xlabel('做出盈利决定的可能性')
+    ax.set_ylabel('想法')
     ax.set_xlim(lower_plot, upper_plot)
     ax.set_ylim((0, y.max() + 1.))
 

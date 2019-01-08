@@ -23,7 +23,8 @@ import numpy as np
 import pandas as pd
 from IPython.display import display, HTML
 
-import empyrical.utils
+# import empyrical.utils
+import empyrical.sqldata
 
 from . import pos
 from . import txn
@@ -427,18 +428,20 @@ def to_series(df):
 
 # This functions is simply a passthrough to empyrical, but is
 # required by the register_returns_func and get_symbol_rets.
-default_returns_func = empyrical.utils.default_returns_func
+default_stock_returns_func = empyrical.sqldata.get_single_stock_equity
+default_index_returns_func = empyrical.sqldata.get_single_index_equity
 
 # Settings dict to store functions/values that may
 # need to be overridden depending on the users environment
 SETTINGS = {
-    'returns_func': default_returns_func
+    'stock_returns_func': default_stock_returns_func,
+    'index_returns_func': default_index_returns_func,
 }
 
 
-def register_return_func(func):
+def register_return_func(func, is_index):
     """
-    Registers the 'returns_func' that will be called for
+    Registers the 'stock_returns_func' that will be called for
     retrieving returns data.
 
     Parameters
@@ -447,21 +450,25 @@ def register_return_func(func):
         A function that returns a pandas Series of asset returns.
         The signature of the function must be as follows
 
-        >>> func(symbol)
+        >>> func(symbol, True)
 
         Where symbol is an asset identifier
 
+    is_index : bool
+        是否为指数代码
     Returns
     -------
     None
     """
+    if is_index:
+        SETTINGS['index_returns_func'] = func
+    else:
+        SETTINGS['stock_returns_func'] = func
 
-    SETTINGS['returns_func'] = func
 
-
-def get_symbol_rets(symbol, start=None, end=None):
+def get_symbol_rets(symbol, start=None, end=None, is_index=True):
     """
-    Calls the currently registered 'returns_func'
+    Calls the currently registered 'stock_returns_func'
 
     Parameters
     ----------
@@ -475,16 +482,18 @@ def get_symbol_rets(symbol, start=None, end=None):
     end : date, optional
         Latest date to fetch data for.
         Defaults to latest date available.
-
+    is_index : bool, optional
+        是否为指数代码
     Returns
     -------
     pandas.Series
-        Returned by the current 'returns_func'
+        Returned by the current 'stock_returns_func'
     """
-
-    return SETTINGS['returns_func'](symbol,
-                                    start=start,
-                                    end=end)
+    if is_index:
+        func = SETTINGS['index_returns_func']
+    else:
+        func = SETTINGS['stock_returns_func']
+    return func(symbol, start, end)
 
 
 def configure_legend(ax, autofmt_xdate=True, change_colors=False,
