@@ -76,3 +76,14 @@ PERIODS['Recovery'] = (pd.Timestamp('20090401'),
 
 PERIODS['New Normal'] = (pd.Timestamp('20130101'),
                          pd.Timestamp('today'))
+                         
+PERIODS['股权分置改革'] = (pd.Timestamp('20050501'), pd.Timestamp('20071001'))
+# 9/11
+PERIODS['911恐怖袭击'] = (pd.Timestamp('20010911'), pd.Timestamp('20011011'))
+
+PERIODS['四万亿投资'] = (pd.Timestamp('2008-11-1'), pd.Timestamp('2009-7-1'))
+
+PERIODS['融资强平'] = (pd.Timestamp('2015-6-15'), pd.Timestamp('2015-7-9'))
+PERIODS['清理配资'] = (pd.Timestamp('2015-8-18'), pd.Timestamp('2015-8-26'))
+
+PERIODS['熔断机制'] = (pd.Timestamp('2016-1-1'), pd.Timestamp('2016-1-9'))
