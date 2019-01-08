@@ -18,19 +18,31 @@ from functools import partial
 import matplotlib.pyplot as plt
 import numpy as np
 
-
+# SECTORS = OrderedDict([
+#     (101, 'Basic Materials'),
+#     (102, 'Consumer Cyclical'),
+#     (103, 'Financial Services'),
+#     (104, 'Real Estate'),
+#     (205, 'Consumer Defensive'),
+#     (206, 'Healthcare'),
+#     (207, 'Utilities'),
+#     (308, 'Communication Services'),
+#     (309, 'Energy'),
+#     (310, 'Industrials'),
+#     (311, 'Technology')
+# ])
 SECTORS = OrderedDict([
-    (101, 'Basic Materials'),
-    (102, 'Consumer Cyclical'),
-    (103, 'Financial Services'),
-    (104, 'Real Estate'),
-    (205, 'Consumer Defensive'),
-    (206, 'Healthcare'),
-    (207, 'Utilities'),
-    (308, 'Communication Services'),
-    (309, 'Energy'),
-    (310, 'Industrials'),
-    (311, 'Technology')
+    (101, '基本材料'),
+    (102, '主要消费'),
+    (103, '金融服务'),
+    (104, '房地产'),
+    (205, '可选消费'),
+    (206, '医疗保健'),
+    (207, '公用事业'),
+    (308, '通讯服务'),
+    (309, '能源'),
+    (310, '工业领域'),
+    (311, '工程技术')
 ])
 
 CAP_BUCKETS = OrderedDict([
