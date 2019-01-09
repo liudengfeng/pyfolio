@@ -38,7 +38,12 @@ from . import txn
 from . import utils
 
 # MKL 要求
+# 最好的方式是在系统环境变量中设置
 os.environ.setdefault('MKL_THREADING_LAYER', 'GNU')
+# theano GPU Fix lib path
+# 不支持最新版本cudnn
+# os.environ.setdefault('LD_LIBRARY_PATH', 'C:\\tools\\cuda\\lib\\x64')
+
 try:
     from . import bayesian
     have_bayesian = True
