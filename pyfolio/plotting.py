@@ -436,7 +436,7 @@ def plot_drawdown_periods(returns, top=10, ax=None, **kwargs):
     lim = ax.get_ylim()
     colors = sns.cubehelix_palette(len(df_drawdowns))[::-1]
     for i, (peak, recovery) in df_drawdowns[
-            ['Peak date', 'Recovery date']].iterrows():
+            ['波峰日期', '恢复日期']].iterrows():
         if pd.isnull(recovery):
             recovery = returns.index[-1]
         ax.fill_between((peak, recovery),
@@ -592,8 +592,8 @@ def show_perf_stats(returns, factor_returns=None, positions=None,
 
     date_rows = OrderedDict()
     if len(returns.index) > 0:
-        date_rows['Start date'] = returns.index[0].strftime('%Y-%m-%d')
-        date_rows['End date'] = returns.index[-1].strftime('%Y-%m-%d')
+        date_rows['开始日期'] = returns.index[0].strftime('%Y-%m-%d')
+        date_rows['结束日期'] = returns.index[-1].strftime('%Y-%m-%d')
 
     if live_start_date is not None:
         live_start_date = ep.utils.get_utc_timestamp(live_start_date)
@@ -628,10 +628,8 @@ def show_perf_stats(returns, factor_returns=None, positions=None,
             transactions=transactions_oos,
             turnover_denom=turnover_denom)
         if len(returns.index) > 0:
-            date_rows['In-sample months'] = int(len(returns_is) /
-                                                APPROX_BDAYS_PER_MONTH)
-            date_rows['Out-of-sample months'] = int(len(returns_oos) /
-                                                    APPROX_BDAYS_PER_MONTH)
+            date_rows['样本内月数'] = int(len(returns_is) / APPROX_BDAYS_PER_MONTH)
+            date_rows['样本外月数'] = int(len(returns_oos) / APPROX_BDAYS_PER_MONTH)
 
         perf_stats = pd.concat(OrderedDict([
             ('样本内', perf_stats_is),
@@ -640,8 +638,7 @@ def show_perf_stats(returns, factor_returns=None, positions=None,
         ]), axis=1)
     else:
         if len(returns.index) > 0:
-            date_rows['Total months'] = int(len(returns) /
-                                            APPROX_BDAYS_PER_MONTH)
+            date_rows['总月数'] = int(len(returns) / APPROX_BDAYS_PER_MONTH)
         perf_stats = pd.DataFrame(perf_stats_all, columns=['Backtest'])
 
     for column in perf_stats.columns:
@@ -805,11 +802,11 @@ def plot_rolling_returns(returns,
         oos_cum_returns = pd.Series([])
 
     is_cum_returns.plot(lw=3, color='forestgreen', alpha=0.6,
-                        label='Backtest', ax=ax, **kwargs)
+                        label='回测', ax=ax, **kwargs)
 
     if len(oos_cum_returns) > 0:
         oos_cum_returns.plot(lw=4, color='red', alpha=0.6,
-                             label='Live', ax=ax, **kwargs)
+                             label='实时交易', ax=ax, **kwargs)
 
         if cone_std is not None:
             if isinstance(cone_std, (float, int)):
@@ -1170,7 +1167,7 @@ def show_and_plot_top_positions(returns, positions_alloc,
             ax = plt.gca()
 
         positions_alloc[df_top_abs.index].plot(
-            title='随时间推移的投资组合分配，只显示市值前10名',
+            title='随时间推移的投资组合分配（市值前10名）',
             alpha=0.5, ax=ax, **kwargs)
 
         # Place legend below plot, shrink plot by 20%
@@ -1251,7 +1248,7 @@ def plot_sector_allocations(returns, sector_alloc, ax=None, **kwargs):
     if ax is None:
         ax = plt.gcf()
 
-    sector_alloc.plot(title='Sector allocation over time',
+    sector_alloc.plot(title='随时间变化的部门分配',
                       alpha=0.5, ax=ax, **kwargs)
 
     box = ax.get_position()
@@ -1263,7 +1260,7 @@ def plot_sector_allocations(returns, sector_alloc, ax=None, **kwargs):
               bbox_to_anchor=(0.5, -0.14), ncol=5)
 
     ax.set_xlim((sector_alloc.index[0], sector_alloc.index[-1]))
-    ax.set_ylabel('Exposure by sector')
+    ax.set_ylabel('部门分组敞口')
     ax.set_xlabel('')
 
     return ax
@@ -1663,8 +1660,8 @@ def show_worst_drawdown_periods(returns, top=5):
 
     drawdown_df = timeseries.gen_drawdown_table(returns, top=top)
     utils.print_table(
-        drawdown_df.sort_values('Net drawdown in %', ascending=False),
-        name='Worst drawdown periods',
+        drawdown_df.sort_values('净回撤（%）', ascending=False),
+        name='最差的亏损期',
         float_format='{0:.2f}'.format,
     )
 
@@ -1702,7 +1699,7 @@ def plot_monthly_returns_timeseries(returns, ax=None, **kwargs):
                 y=monthly_rets.values,
                 color='steelblue')
 
-    locs, labels = plt.xticks()
+    _, labels = plt.xticks()
     plt.setp(labels, rotation=90)
 
     # only show x-labels on year boundary
@@ -1805,7 +1802,7 @@ def show_profit_attribution(round_trips):
             inplace=False,
             ascending=False,
         ),
-        name='Profitability (PnL / PnL total) per name',
+        name='分项盈利能力（单项盈亏 / 盈亏总计）',
         float_format='{:.2%}'.format,
     )
 

@@ -497,6 +497,8 @@ def create_returns_tear_sheet(returns, positions=None,
     """
 
     if benchmark_rets is not None:
+        # 截取有效基准收益率
+        benchmark_rets = utils.clip_returns_to_benchmark(benchmark_rets, returns)
         returns = utils.clip_returns_to_benchmark(returns, benchmark_rets)
 
     plotting.show_perf_stats(returns, benchmark_rets,
@@ -560,7 +562,7 @@ def create_returns_tear_sheet(returns, positions=None,
         cone_std=cone_std,
         ax=ax_rolling_returns)
     ax_rolling_returns.set_title(
-        'Cumulative returns')
+        '累积收益率')
 
     plotting.plot_rolling_returns(
         returns,
@@ -571,7 +573,7 @@ def create_returns_tear_sheet(returns, positions=None,
         legend_loc=None,
         ax=ax_rolling_returns_vol_match)
     ax_rolling_returns_vol_match.set_title(
-        'Cumulative returns volatility matched to benchmark')
+        '与基准相匹配的累积收益率波动')
 
     plotting.plot_rolling_returns(
         returns,
@@ -581,15 +583,14 @@ def create_returns_tear_sheet(returns, positions=None,
         cone_std=cone_std,
         ax=ax_rolling_returns_log)
     ax_rolling_returns_log.set_title(
-        'Cumulative returns on logarithmic scale')
+        '对数刻度累积收益率')
 
     plotting.plot_returns(
         returns,
         live_start_date=live_start_date,
         ax=ax_returns,
     )
-    ax_returns.set_title(
-        'Returns')
+    ax_returns.set_title('收益率')
 
     if benchmark_rets is not None:
         plotting.plot_rolling_beta(
@@ -852,6 +853,7 @@ def create_round_trip_tear_sheet(returns, positions, transactions,
 
     transactions_closed = round_trips.add_closing_transactions(positions,
                                                                transactions)
+                                                      
     # extract_round_trips requires BoD portfolio_value
     trades = round_trips.extract_round_trips(
         transactions_closed,
@@ -889,15 +891,15 @@ def create_round_trip_tear_sheet(returns, positions, transactions,
 
     trade_holding_times = [x.days for x in trades['duration']]
     sns.distplot(trade_holding_times, kde=False, ax=ax_holding_time)
-    ax_holding_time.set(xlabel='Holding time in days')
+    ax_holding_time.set(xlabel='持有天数')
 
     sns.distplot(trades.pnl, kde=False, ax=ax_pnl_per_round_trip_dollars)
-    ax_pnl_per_round_trip_dollars.set(xlabel='PnL per round-trip trade in $')
+    ax_pnl_per_round_trip_dollars.set(xlabel='每回合交易的盈亏')
 
     sns.distplot(trades.returns.dropna() * 100, kde=False,
                  ax=ax_pnl_per_round_trip_pct)
     ax_pnl_per_round_trip_pct.set(
-        xlabel='Round-trip returns in %')
+        xlabel='每回合交易收益率%')
 
     gs.tight_layout(fig)
 
