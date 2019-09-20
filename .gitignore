@@ -61,3 +61,7 @@ target/
 
 # IPython notebook checkpoints
 .ipynb_checkpoints/
+.vs/ProjectSettings.json
+.vs/pyfolio/v16/.suo
+.vs/VSWorkspaceState.json
+.vs/slnx.sqlite

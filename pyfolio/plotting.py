@@ -55,7 +55,7 @@ def customize(func):
     return call_w_context
 
 
-def plotting_context(context='notebook', font_scale=1.5, rc=None):
+def plotting_context(context='notebook', font_scale=1.1, rc=None):
     """
     Create pyfolio default plotting style context.
 
@@ -131,7 +131,7 @@ def axes_style(style='darkgrid', rc=None):
     if rc is None:
         rc = {}
 
-    rc_default = {"font.sans-serif":['simhei', 'Arial']}
+    rc_default = {"font.sans-serif":['SimHei', 'Arial']}
 
     # Add defaults if they do not exist
     for name, val in rc_default.items():
