@@ -129,8 +129,8 @@ def _groupby_consecutive(txn, max_delta=pd.Timedelta('8h')):
         t['block_time'] = ((t.dt.sub(t.dt.shift(1))) >
                            max_delta).astype(int).cumsum()
         grouped_price = (t.groupby(['block_dir',
-                                   'block_time'])
-                          .apply(vwap))
+                                    'block_time'])
+                         .apply(vwap))
         grouped_price.name = 'price'
         grouped_rest = t.groupby(['block_dir', 'block_time']).agg({
             'amount': 'sum',
@@ -293,7 +293,7 @@ def add_closing_transactions(positions, transactions):
         Transactions with closing transactions appended.
     """
 
-    closed_txns = transactions[['symbol', 'amount', 'price']]
+    closed_txns = transactions[['amount', 'price', 'symbol']]
 
     pos_at_end = positions.drop('cash', axis=1).iloc[-1]
     open_pos = pos_at_end.replace(0, np.nan).dropna()

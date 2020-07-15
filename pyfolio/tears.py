@@ -22,7 +22,7 @@ from IPython.display import display, Markdown
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import pandas as pd
-
+import os
 from . import _seaborn as sns
 from . import capacity
 from . import perf_attrib

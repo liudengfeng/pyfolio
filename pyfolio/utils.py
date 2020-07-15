@@ -16,17 +16,18 @@
 from __future__ import division
 
 import warnings
-
 from itertools import cycle
-from matplotlib.pyplot import cm
+
+import empyrical.data
+import empyrical.utils
 import numpy as np
 import pandas as pd
-from IPython.display import display, HTML
+from IPython.display import HTML, display
+from matplotlib.pyplot import cm
 
-import empyrical.utils
-import empyrical.data
-from . import pos
-from . import txn
+from cnswd.utils import sanitize_dates
+
+from . import pos, txn
 
 APPROX_BDAYS_PER_MONTH = 21
 APPROX_BDAYS_PER_YEAR = 252
@@ -481,10 +482,10 @@ def get_symbol_rets(symbol, start=None, end=None):
     pandas.Series
         Returned by the current 'returns_func'
     """
-
+    start, end = sanitize_dates(start, end)
     return SETTINGS['returns_func'](symbol,
-                                    start=start,
-                                    end=end)
+                                    start_date=start,
+                                    end_date=end)
 
 
 def configure_legend(ax, autofmt_xdate=True, change_colors=False,

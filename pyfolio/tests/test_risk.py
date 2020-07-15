@@ -7,7 +7,7 @@ import pandas as pd
 from pandas import read_csv
 from pyfolio.utils import to_utc
 
-from pandas.util.testing import assert_frame_equal, assert_series_equal
+from pandas.testing import assert_frame_equal, assert_series_equal
 
 from pyfolio.risk import (compute_style_factor_exposures,
                           compute_sector_exposures,
@@ -72,8 +72,9 @@ class RiskTestCase(TestCase):
             __location__ + '/test_data/test_{}.csv'.format(style),
             index_col=0, parse_dates=True))
         test_dict.update({style: df})
-    test_styles = pd.Panel()
-    test_styles = test_styles.from_dict(test_dict)
+    # test_styles = pd.DataFrame()
+    # test_styles = test_styles.from_dict(test_dict)
+    test_styles = test_dict
 
     expected_styles = to_utc(read_csv(
         __location__ + '/test_data/expected_styles.csv',
@@ -83,14 +84,14 @@ class RiskTestCase(TestCase):
         (test_pos, test_styles, expected_styles)
     ])
     def test_compute_style_factor_exposures(self, positions,
-                                            risk_factor_panel, expected):
+                                            risk_factor_dict, expected):
         style_list = []
-        for name, value in risk_factor_panel.iteritems():
-            risk_factor_panel[name].columns = \
-                risk_factor_panel[name].columns.astype(int)
+        for name, value in risk_factor_dict.items():
+            risk_factor_dict[name].columns = \
+                risk_factor_dict[name].columns.astype(int)
             style_list.append(
                 compute_style_factor_exposures(positions,
-                                               risk_factor_panel[name])
+                                               risk_factor_dict[name])
                 )
         expected.columns = expected.columns.astype(int)
         assert_frame_equal(pd.concat(style_list, axis=1), expected)

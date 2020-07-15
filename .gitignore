@@ -66,3 +66,5 @@ target/
 .vs/VSWorkspaceState.json
 .vs/slnx.sqlite
 .vscode/settings.json
+report.html
+assets/style.css
