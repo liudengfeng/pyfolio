@@ -23,9 +23,8 @@ import numpy as np
 import pandas as pd
 from IPython.display import display, HTML
 
-# import empyrical.utils
+import empyrical.utils
 import empyrical.sqldata
-
 from . import pos
 from . import txn
 
@@ -349,13 +348,12 @@ def estimate_intraday(returns, positions, transactions, EOD_hour=23):
         columns='symbol').replace(np.nan, 0)
 
     # Cumulate transaction amounts each day
-    txn_val['date'] = txn_val.index.date
-    txn_val = txn_val.groupby('date').cumsum()
+    txn_val = txn_val.groupby(txn_val.index.date).cumsum()
 
     # Calculate exposure, then take peak of exposure every day
     txn_val['exposure'] = txn_val.abs().sum(axis=1)
     condition = (txn_val['exposure'] == txn_val.groupby(
-        pd.TimeGrouper('24H'))['exposure'].transform(max))
+        pd.Grouper(freq='24H'))['exposure'].transform(max))
     txn_val = txn_val[condition].drop('exposure', axis=1)
 
     # Compute cash delta
@@ -428,20 +426,18 @@ def to_series(df):
 
 # This functions is simply a passthrough to empyrical, but is
 # required by the register_returns_func and get_symbol_rets.
-default_stock_returns_func = empyrical.sqldata.get_single_stock_equity
-default_index_returns_func = empyrical.sqldata.get_single_index_equity
+default_returns_func = empyrical.utils.default_returns_func
 
 # Settings dict to store functions/values that may
 # need to be overridden depending on the users environment
 SETTINGS = {
-    'stock_returns_func': default_stock_returns_func,
-    'index_returns_func': default_index_returns_func,
+    'returns_func': default_returns_func
 }
 
 
-def register_return_func(func, is_index):
+def register_return_func(func):
     """
-    Registers the 'stock_returns_func' that will be called for
+    Registers the 'returns_func' that will be called for
     retrieving returns data.
 
     Parameters
@@ -450,25 +446,21 @@ def register_return_func(func, is_index):
         A function that returns a pandas Series of asset returns.
         The signature of the function must be as follows
 
-        >>> func(symbol, True)
+        >>> func(symbol)
 
         Where symbol is an asset identifier
 
-    is_index : bool
-        是否为指数代码
     Returns
     -------
     None
     """
-    if is_index:
-        SETTINGS['index_returns_func'] = func
-    else:
-        SETTINGS['stock_returns_func'] = func
+
+    SETTINGS['returns_func'] = func
 
 
-def get_symbol_rets(symbol, start=None, end=None, is_index=True):
+def get_symbol_rets(symbol, start=None, end=None):
     """
-    Calls the currently registered 'stock_returns_func'
+    Calls the currently registered 'returns_func'
 
     Parameters
     ----------
@@ -482,18 +474,16 @@ def get_symbol_rets(symbol, start=None, end=None, is_index=True):
     end : date, optional
         Latest date to fetch data for.
         Defaults to latest date available.
-    is_index : bool, optional
-        是否为指数代码
+
     Returns
     -------
     pandas.Series
-        Returned by the current 'stock_returns_func'
+        Returned by the current 'returns_func'
     """
-    if is_index:
-        func = SETTINGS['index_returns_func']
-    else:
-        func = SETTINGS['stock_returns_func']
-    return func(symbol, start, end)
+
+    return SETTINGS['returns_func'](symbol,
+                                    start=start,
+                                    end=end)
 
 
 def configure_legend(ax, autofmt_xdate=True, change_colors=False,
@@ -529,7 +519,7 @@ def configure_legend(ax, autofmt_xdate=True, change_colors=False,
               framealpha=0.5,
               loc='upper left',
               bbox_to_anchor=(1.05, 1),
-              fontsize='large')
+              fontsize='small')
 
     # manually rotate xticklabels instead of using matplotlib's autofmt_xdate
     # because it disables xticklabels for all but the last plot

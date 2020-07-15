@@ -670,22 +670,22 @@ FACTOR_STAT_FUNCS = [
 ]
 
 STAT_FUNC_NAMES = {
-    'annual_return': '年收益率',
-    'cum_returns_final': '累积收益率',
-    'annual_volatility': '年波动性',
-    'sharpe_ratio': '夏普比率',
-    'calmar_ratio': '卡尔玛比率',
-    'stability_of_timeseries': '稳定性',
-    'max_drawdown': '最大回撤',
-    'omega_ratio': '欧米茄比率',
-    'sortino_ratio': 'Sortino比率',
-    'skew': '偏度',
-    'kurtosis': '峰度',
-    'tail_ratio': '尾部比率',
-    'common_sense_ratio': '常识比率',
-    'value_at_risk': '日在险价值',
-    'alpha': '阿尔法',
-    'beta': '贝塔',
+    'annual_return': 'Annual return',
+    'cum_returns_final': 'Cumulative returns',
+    'annual_volatility': 'Annual volatility',
+    'sharpe_ratio': 'Sharpe ratio',
+    'calmar_ratio': 'Calmar ratio',
+    'stability_of_timeseries': 'Stability',
+    'max_drawdown': 'Max drawdown',
+    'omega_ratio': 'Omega ratio',
+    'sortino_ratio': 'Sortino ratio',
+    'skew': 'Skew',
+    'kurtosis': 'Kurtosis',
+    'tail_ratio': 'Tail ratio',
+    'common_sense_ratio': 'Common sense ratio',
+    'value_at_risk': 'Daily value at risk',
+    'alpha': 'Alpha',
+    'beta': 'Beta',
 }
 
 
@@ -726,9 +726,11 @@ def perf_stats(returns, factor_returns=None, positions=None,
         stats[STAT_FUNC_NAMES[stat_func.__name__]] = stat_func(returns)
 
     if positions is not None:
-        stats['总杠杆'] = gross_lev(positions).mean()
+        stats['Gross leverage'] = gross_lev(positions).mean()
         if transactions is not None:
-            stats['日换手率'] = get_turnover(positions,transactions, turnover_denom).mean()
+            stats['Daily turnover'] = get_turnover(positions,
+                                                   transactions,
+                                                   turnover_denom).mean()
     if factor_returns is not None:
         for stat_func in FACTOR_STAT_FUNCS:
             res = stat_func(returns, factor_returns)
@@ -888,7 +890,7 @@ def get_max_drawdown_underwater(underwater):
         The maximum drawdown's recovery.
     """
 
-    valley = np.argmin(underwater)  # end of the period
+    valley = underwater.idxmin()  # end of the period
     # Find first 0
     peak = underwater[:valley][underwater[:valley] == 0].index[-1]
     # Find last 0
@@ -950,7 +952,7 @@ def get_top_drawdowns(returns, top=10):
     underwater = df_cum / running_max - 1
 
     drawdowns = []
-    for t in range(top):
+    for _ in range(top):
         peak, valley, recovery = get_max_drawdown_underwater(underwater)
         # Slice out draw-down period
         if not pd.isnull(recovery):
@@ -961,7 +963,9 @@ def get_top_drawdowns(returns, top=10):
             underwater = underwater.loc[:peak]
 
         drawdowns.append((peak, valley, recovery))
-        if (len(returns) == 0) or (len(underwater) == 0):
+        if ((len(returns) == 0)
+                or (len(underwater) == 0)
+                or (np.min(underwater) == 0)):
             break
 
     return drawdowns
@@ -988,35 +992,35 @@ def gen_drawdown_table(returns, top=10):
     df_cum = ep.cum_returns(returns, 1.0)
     drawdown_periods = get_top_drawdowns(returns, top=top)
     df_drawdowns = pd.DataFrame(index=list(range(top)),
-                                columns=['净回撤（%）',
-                                         '波峰日期',
-                                         '波谷日期',
-                                         '恢复日期',
-                                         '天数'])
+                                columns=['Net drawdown in %',
+                                         'Peak date',
+                                         'Valley date',
+                                         'Recovery date',
+                                         'Duration'])
 
     for i, (peak, valley, recovery) in enumerate(drawdown_periods):
         if pd.isnull(recovery):
-            df_drawdowns.loc[i, '天数'] = np.nan
+            df_drawdowns.loc[i, 'Duration'] = np.nan
         else:
-            df_drawdowns.loc[i, '天数'] = len(pd.date_range(peak,
+            df_drawdowns.loc[i, 'Duration'] = len(pd.date_range(peak,
                                                                 recovery,
                                                                 freq='B'))
-        df_drawdowns.loc[i, '波峰日期'] = (peak.to_pydatetime()
+        df_drawdowns.loc[i, 'Peak date'] = (peak.to_pydatetime()
                                             .strftime('%Y-%m-%d'))
-        df_drawdowns.loc[i, '波谷日期'] = (valley.to_pydatetime()
+        df_drawdowns.loc[i, 'Valley date'] = (valley.to_pydatetime()
                                               .strftime('%Y-%m-%d'))
         if isinstance(recovery, float):
-            df_drawdowns.loc[i, '恢复日期'] = recovery
+            df_drawdowns.loc[i, 'Recovery date'] = recovery
         else:
-            df_drawdowns.loc[i, '恢复日期'] = (recovery.to_pydatetime()
+            df_drawdowns.loc[i, 'Recovery date'] = (recovery.to_pydatetime()
                                                     .strftime('%Y-%m-%d'))
-        df_drawdowns.loc[i, '净回撤（%）'] = (
+        df_drawdowns.loc[i, 'Net drawdown in %'] = (
             (df_cum.loc[peak] - df_cum.loc[valley]) / df_cum.loc[peak]) * 100
 
-    df_drawdowns['波峰日期'] = pd.to_datetime(df_drawdowns['波峰日期'])
-    df_drawdowns['波谷日期'] = pd.to_datetime(df_drawdowns['波谷日期'])
-    df_drawdowns['恢复日期'] = pd.to_datetime(
-        df_drawdowns['恢复日期'])
+    df_drawdowns['Peak date'] = pd.to_datetime(df_drawdowns['Peak date'])
+    df_drawdowns['Valley date'] = pd.to_datetime(df_drawdowns['Valley date'])
+    df_drawdowns['Recovery date'] = pd.to_datetime(
+        df_drawdowns['Recovery date'])
 
     return df_drawdowns
 
@@ -1200,7 +1204,7 @@ def forecast_cone_bootstrap(is_returns, num_days, cone_std=(1., 1.5, 2.),
     return cone_bounds
 
 
-def extract_interesting_date_ranges(returns):
+def extract_interesting_date_ranges(returns, periods=None):
     """
     Extracts returns based on interesting events. See
     gen_date_range_interesting.
@@ -1216,11 +1220,12 @@ def extract_interesting_date_ranges(returns):
     ranges : OrderedDict
         Date ranges, with returns, of all valid events.
     """
-
+    if periods is None:
+        periods = PERIODS
     returns_dupe = returns.copy()
     returns_dupe.index = returns_dupe.index.map(pd.Timestamp)
     ranges = OrderedDict()
-    for name, (start, end) in PERIODS.items():
+    for name, (start, end) in periods.items():
         try:
             period = returns_dupe.loc[start:end]
             if len(period) == 0:
