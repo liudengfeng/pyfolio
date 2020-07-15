@@ -55,7 +55,7 @@ def customize(func):
     return call_w_context
 
 
-def plotting_context(context='notebook', font_scale=1.1, rc=None):
+def plotting_context(context='notebook', font_scale=1.5, rc=None):
     """
     Create pyfolio default plotting style context.
 
@@ -131,7 +131,7 @@ def axes_style(style='darkgrid', rc=None):
     if rc is None:
         rc = {}
 
-    rc_default = {"font.sans-serif":['SimHei', 'Arial']}
+    rc_default = {}
 
     # Add defaults if they do not exist
     for name, val in rc_default.items():
@@ -176,9 +176,9 @@ def plot_monthly_returns_heatmap(returns, ax=None, **kwargs):
         cbar=False,
         cmap=matplotlib.cm.RdYlGn,
         ax=ax, **kwargs)
-    ax.set_ylabel('年')
-    ax.set_xlabel('月')
-    ax.set_title("月度收益率(%)")
+    ax.set_ylabel('Year')
+    ax.set_xlabel('Month')
+    ax.set_title("Monthly returns (%)")
     return ax
 
 
@@ -225,10 +225,10 @@ def plot_annual_returns(returns, ax=None, **kwargs):
      ).plot(ax=ax, kind='barh', alpha=0.70, **kwargs)
     ax.axvline(0.0, color='black', linestyle='-', lw=3)
 
-    ax.set_ylabel('年')
-    ax.set_xlabel('收益率')
-    ax.set_title("年度收益率")
-    ax.legend(['平均值'], frameon=True, framealpha=0.5)
+    ax.set_ylabel('Year')
+    ax.set_xlabel('Returns')
+    ax.set_title("Annual returns")
+    ax.legend(['Mean'], frameon=True, framealpha=0.5)
     return ax
 
 
@@ -276,10 +276,10 @@ def plot_monthly_returns_dist(returns, ax=None, **kwargs):
         alpha=1.0)
 
     ax.axvline(0.0, color='black', linestyle='-', lw=3, alpha=0.75)
-    ax.legend(['平均值'], frameon=True, framealpha=0.5)
-    ax.set_ylabel('月数')
-    ax.set_xlabel('收益率')
-    ax.set_title("月度收益率分布")
+    ax.legend(['Mean'], frameon=True, framealpha=0.5)
+    ax.set_ylabel('Number of months')
+    ax.set_xlabel('Returns')
+    ax.set_title("Distribution of monthly returns")
     return ax
 
 
@@ -330,15 +330,15 @@ def plot_holdings(returns, positions, legend_loc='best', ax=None, **kwargs):
 
     ax.set_xlim((returns.index[0], returns.index[-1]))
 
-    leg = ax.legend(['日市值',
-                     '月平均市值',
-                     '整体平均市值'],
+    leg = ax.legend(['Daily holdings',
+                     'Average daily holdings, by month',
+                     'Average daily holdings, overall'],
                     loc=legend_loc, frameon=True,
                     framealpha=0.5)
     leg.get_frame().set_edgecolor('black')
 
-    ax.set_title('总持仓市值')
-    ax.set_ylabel('市值')
+    ax.set_title('Total holdings')
+    ax.set_ylabel('Holdings')
     ax.set_xlabel('')
     return ax
 
@@ -394,8 +394,8 @@ def plot_long_short_holdings(returns, positions,
     leg.get_frame().set_edgecolor('black')
 
     ax.set_xlim((returns.index[0], returns.index[-1]))
-    ax.set_title('多头与空头总市值')
-    ax.set_ylabel('市值')
+    ax.set_title('Long and short holdings')
+    ax.set_ylabel('Holdings')
     ax.set_xlabel('')
     return ax
 
@@ -436,7 +436,7 @@ def plot_drawdown_periods(returns, top=10, ax=None, **kwargs):
     lim = ax.get_ylim()
     colors = sns.cubehelix_palette(len(df_drawdowns))[::-1]
     for i, (peak, recovery) in df_drawdowns[
-            ['波峰日期', '恢复日期']].iterrows():
+            ['Peak date', 'Recovery date']].iterrows():
         if pd.isnull(recovery):
             recovery = returns.index[-1]
         ax.fill_between((peak, recovery),
@@ -445,9 +445,9 @@ def plot_drawdown_periods(returns, top=10, ax=None, **kwargs):
                         alpha=.4,
                         color=colors[i])
     ax.set_ylim(lim)
-    ax.set_title('%i个最大回撤周期' % top)
-    ax.set_ylabel('累积收益率')
-    ax.legend(['投资组合'], loc='upper left',
+    ax.set_title('Top %i drawdown periods' % top)
+    ax.set_ylabel('Cumulative returns')
+    ax.legend(['Portfolio'], loc='upper left',
               frameon=True, framealpha=0.5)
     ax.set_xlabel('')
     return ax
@@ -484,8 +484,8 @@ def plot_drawdown_underwater(returns, ax=None, **kwargs):
     running_max = np.maximum.accumulate(df_cum_rets)
     underwater = -100 * ((running_max - df_cum_rets) / running_max)
     (underwater).plot(ax=ax, kind='area', color='coral', alpha=0.7, **kwargs)
-    ax.set_ylabel('亏损')
-    ax.set_title('亏损图')
+    ax.set_ylabel('Drawdown')
+    ax.set_title('Underwater plot')
     ax.set_xlabel('')
     return ax
 
@@ -592,8 +592,8 @@ def show_perf_stats(returns, factor_returns=None, positions=None,
 
     date_rows = OrderedDict()
     if len(returns.index) > 0:
-        date_rows['开始日期'] = returns.index[0].strftime('%Y-%m-%d')
-        date_rows['结束日期'] = returns.index[-1].strftime('%Y-%m-%d')
+        date_rows['Start date'] = returns.index[0].strftime('%Y-%m-%d')
+        date_rows['End date'] = returns.index[-1].strftime('%Y-%m-%d')
 
     if live_start_date is not None:
         live_start_date = ep.utils.get_utc_timestamp(live_start_date)
@@ -628,24 +628,27 @@ def show_perf_stats(returns, factor_returns=None, positions=None,
             transactions=transactions_oos,
             turnover_denom=turnover_denom)
         if len(returns.index) > 0:
-            date_rows['样本内月数'] = int(len(returns_is) / APPROX_BDAYS_PER_MONTH)
-            date_rows['样本外月数'] = int(len(returns_oos) / APPROX_BDAYS_PER_MONTH)
+            date_rows['In-sample months'] = int(len(returns_is) /
+                                                APPROX_BDAYS_PER_MONTH)
+            date_rows['Out-of-sample months'] = int(len(returns_oos) /
+                                                    APPROX_BDAYS_PER_MONTH)
 
         perf_stats = pd.concat(OrderedDict([
-            ('样本内', perf_stats_is),
-            ('样本外', perf_stats_oos),
-            ('全部', perf_stats_all),
+            ('In-sample', perf_stats_is),
+            ('Out-of-sample', perf_stats_oos),
+            ('All', perf_stats_all),
         ]), axis=1)
     else:
         if len(returns.index) > 0:
-            date_rows['总月数'] = int(len(returns) / APPROX_BDAYS_PER_MONTH)
+            date_rows['Total months'] = int(len(returns) /
+                                            APPROX_BDAYS_PER_MONTH)
         perf_stats = pd.DataFrame(perf_stats_all, columns=['Backtest'])
 
     for column in perf_stats.columns:
         for stat, value in perf_stats[column].iteritems():
             if stat in STAT_FUNCS_PCT:
                 perf_stats.loc[stat, column] = str(np.round(value * 100,
-                                                            1)) + '%'
+                                                            3)) + '%'
     if header_rows is None:
         header_rows = date_rows
     else:
@@ -691,7 +694,7 @@ def plot_returns(returns,
         ax = plt.gca()
 
     ax.set_label('')
-    ax.set_ylabel('收益率')
+    ax.set_ylabel('Returns')
 
     if live_start_date is not None:
         live_start_date = ep.utils.get_utc_timestamp(live_start_date)
@@ -771,7 +774,7 @@ def plot_rolling_returns(returns,
         ax = plt.gca()
 
     ax.set_xlabel('')
-    ax.set_ylabel('累积收益率')
+    ax.set_ylabel('Cumulative returns')
     ax.set_yscale('log' if logy else 'linear')
 
     if volatility_match and factor_returns is None:
@@ -802,11 +805,11 @@ def plot_rolling_returns(returns,
         oos_cum_returns = pd.Series([])
 
     is_cum_returns.plot(lw=3, color='forestgreen', alpha=0.6,
-                        label='回测', ax=ax, **kwargs)
+                        label='Backtest', ax=ax, **kwargs)
 
     if len(oos_cum_returns) > 0:
         oos_cum_returns.plot(lw=4, color='red', alpha=0.6,
-                             label='实时交易', ax=ax, **kwargs)
+                             label='Live', ax=ax, **kwargs)
 
         if cone_std is not None:
             if isinstance(cone_std, (float, int)):
@@ -866,7 +869,7 @@ def plot_rolling_beta(returns, factor_returns, legend_loc='best',
     y_axis_formatter = FuncFormatter(utils.two_dec_places)
     ax.yaxis.set_major_formatter(FuncFormatter(y_axis_formatter))
 
-    ax.set_title(f"相对于{str(factor_returns.name)}的投资组合滚动Beta")
+    ax.set_title("Rolling portfolio beta to " + str(factor_returns.name))
     ax.set_ylabel('Beta')
     rb_1 = timeseries.rolling_beta(
         returns, factor_returns, rolling_window=APPROX_BDAYS_PER_MONTH * 6)
@@ -878,8 +881,8 @@ def plot_rolling_beta(returns, factor_returns, legend_loc='best',
     ax.axhline(0.0, color='black', linestyle='-', lw=2)
 
     ax.set_xlabel('')
-    ax.legend(['6个月',
-               '12个月'],
+    ax.legend(['6-mo',
+               '12-mo'],
               loc=legend_loc, frameon=True, framealpha=0.5)
     ax.set_ylim((-1.0, 1.0))
     return ax
@@ -897,8 +900,9 @@ def plot_rolling_volatility(returns, factor_returns=None,
         Daily returns of the strategy, noncumulative.
          - See full explanation in tears.create_full_tear_sheet.
     factor_returns : pd.Series, optional
-        Daily noncumulative returns of the benchmark factor to which betas are
-        computed. Usually a benchmark such as market returns.
+        Daily noncumulative returns of the benchmark factor for which the
+        benchmark rolling volatility is computed. Usually a benchmark such
+        as market returns.
          - This is in the same style as returns.
     rolling_window : int, optional
         The days window over which to compute the volatility.
@@ -931,7 +935,7 @@ def plot_rolling_volatility(returns, factor_returns=None,
         rolling_vol_ts_factor.plot(alpha=.7, lw=3, color='grey', ax=ax,
                                    **kwargs)
 
-    ax.set_title('滚动波动(6个月)')
+    ax.set_title('Rolling volatility (6-month)')
     ax.axhline(
         rolling_vol_ts.mean(),
         color='steelblue',
@@ -940,13 +944,13 @@ def plot_rolling_volatility(returns, factor_returns=None,
 
     ax.axhline(0.0, color='black', linestyle='-', lw=2)
 
-    ax.set_ylabel('波动')
+    ax.set_ylabel('Volatility')
     ax.set_xlabel('')
     if factor_returns is None:
-        ax.legend(['波动', '平均波动'],
+        ax.legend(['Volatility', 'Average volatility'],
                   loc=legend_loc, frameon=True, framealpha=0.5)
     else:
-        ax.legend(['波动', '基准波动', '平均波动'],
+        ax.legend(['Volatility', 'Benchmark volatility', 'Average volatility'],
                   loc=legend_loc, frameon=True, framealpha=0.5)
     return ax
 
@@ -999,7 +1003,7 @@ def plot_rolling_sharpe(returns, factor_returns=None,
         rolling_sharpe_ts_factor.plot(alpha=.7, lw=3, color='grey', ax=ax,
                                       **kwargs)
 
-    ax.set_title('滚动夏普比率(6个月)')
+    ax.set_title('Rolling Sharpe ratio (6-month)')
     ax.axhline(
         rolling_sharpe_ts.mean(),
         color='steelblue',
@@ -1007,13 +1011,13 @@ def plot_rolling_sharpe(returns, factor_returns=None,
         lw=3)
     ax.axhline(0.0, color='black', linestyle='-', lw=3)
 
-    ax.set_ylabel('夏普比率')
+    ax.set_ylabel('Sharpe ratio')
     ax.set_xlabel('')
     if factor_returns is None:
-        ax.legend(['夏普', '平均值'],
+        ax.legend(['Sharpe', 'Average'],
                   loc=legend_loc, frameon=True, framealpha=0.5)
     else:
-        ax.legend(['夏普', '基准夏普', '平均值'],
+        ax.legend(['Sharpe', 'Benchmark Sharpe', 'Average'],
                   loc=legend_loc, frameon=True, framealpha=0.5)
 
     return ax
@@ -1052,8 +1056,8 @@ def plot_gross_leverage(returns, positions, ax=None, **kwargs):
 
     ax.axhline(gl.mean(), color='g', linestyle='--', lw=3)
 
-    ax.set_title('总杠杆率')
-    ax.set_ylabel('总杠杆率')
+    ax.set_title('Gross leverage')
+    ax.set_ylabel('Gross leverage')
     ax.set_xlabel('')
     return ax
 
@@ -1101,8 +1105,8 @@ def plot_exposures(returns, positions, ax=None, **kwargs):
             label='Net', color='black', linestyle='dotted')
 
     ax.set_xlim((returns.index[0], returns.index[-1]))
-    ax.set_title("敞口")
-    ax.set_ylabel('敞口')
+    ax.set_title("Exposure")
+    ax.set_ylabel('Exposure')
     ax.legend(loc='lower left', frameon=True, framealpha=0.5)
     ax.set_xlabel('')
     return ax
@@ -1151,15 +1155,15 @@ def show_and_plot_top_positions(returns, positions_alloc,
     if show_and_plot == 1 or show_and_plot == 2:
         utils.print_table(pd.DataFrame(df_top_long * 100, columns=['max']),
                           float_format='{0:.2f}%'.format,
-                          name='所有时段前10名**多头**头寸')
+                          name='Top 10 long positions of all time')
 
         utils.print_table(pd.DataFrame(df_top_short * 100, columns=['max']),
                           float_format='{0:.2f}%'.format,
-                          name='所有时段前10名**空头**头寸')
+                          name='Top 10 short positions of all time')
 
         utils.print_table(pd.DataFrame(df_top_abs * 100, columns=['max']),
                           float_format='{0:.2f}%'.format,
-                          name='所有时段前10名头寸')
+                          name='Top 10 positions of all time')
 
     if show_and_plot == 0 or show_and_plot == 2:
 
@@ -1167,7 +1171,7 @@ def show_and_plot_top_positions(returns, positions_alloc,
             ax = plt.gca()
 
         positions_alloc[df_top_abs.index].plot(
-            title='随时间推移的投资组合分配（市值前10名）',
+            title='Portfolio allocation over time, only top 10 holdings',
             alpha=0.5, ax=ax, **kwargs)
 
         # Place legend below plot, shrink plot by 20%
@@ -1183,7 +1187,7 @@ def show_and_plot_top_positions(returns, positions_alloc,
             ax.legend(loc=legend_loc)
 
         ax.set_xlim((returns.index[0], returns.index[-1]))
-        ax.set_ylabel('市值敞口')
+        ax.set_ylabel('Exposure by holding')
 
         if hide_positions:
             ax.legend_.remove()
@@ -1210,15 +1214,15 @@ def plot_max_median_position_concentration(positions, ax=None, **kwargs):
     """
 
     if ax is None:
-        ax = plt.gcf()
+        ax = plt.gca()
 
     alloc_summary = pos.get_max_median_position_concentration(positions)
     colors = ['mediumblue', 'steelblue', 'tomato', 'firebrick']
     alloc_summary.plot(linewidth=1, color=colors, alpha=0.6, ax=ax)
 
     ax.legend(loc='center left', frameon=True, framealpha=0.5)
-    ax.set_ylabel('敞口')
-    ax.set_title('多头/空头 最大及中位数头寸集中度')
+    ax.set_ylabel('Exposure')
+    ax.set_title('Long/short max and median position concentration')
 
     return ax
 
@@ -1246,9 +1250,9 @@ def plot_sector_allocations(returns, sector_alloc, ax=None, **kwargs):
     """
 
     if ax is None:
-        ax = plt.gcf()
+        ax = plt.gca()
 
-    sector_alloc.plot(title='随时间变化的部门分配',
+    sector_alloc.plot(title='Sector allocation over time',
                       alpha=0.5, ax=ax, **kwargs)
 
     box = ax.get_position()
@@ -1260,7 +1264,7 @@ def plot_sector_allocations(returns, sector_alloc, ax=None, **kwargs):
               bbox_to_anchor=(0.5, -0.14), ncol=5)
 
     ax.set_xlim((sector_alloc.index[0], sector_alloc.index[-1]))
-    ax.set_ylabel('部门分组敞口')
+    ax.set_ylabel('Exposure by sector')
     ax.set_xlabel('')
 
     return ax
@@ -1310,16 +1314,16 @@ def plot_return_quantiles(returns, live_start_date=None, ax=None, **kwargs):
                       color="red",
                       marker="d", **kwargs)
         red_dots = matplotlib.lines.Line2D([], [], color="red", marker="d",
-                                           label="样本外数据",
+                                           label="Out-of-sample data",
                                            linestyle='')
         ax.legend(handles=[red_dots], frameon=True, framealpha=0.5)
-    ax.set_xticklabels(['每日', '每周', '每月'])
-    ax.set_title('收益率分位数')
+    ax.set_xticklabels(['Daily', 'Weekly', 'Monthly'])
+    ax.set_title('Return quantiles')
 
     return ax
 
 
-def plot_turnover(returns, transactions, positions,
+def plot_turnover(returns, transactions, positions, turnover_denom='AGB',
                   legend_loc='best', ax=None, **kwargs):
     """
     Plots turnover vs. date.
@@ -1341,6 +1345,9 @@ def plot_turnover(returns, transactions, positions,
     positions : pd.DataFrame
         Daily net position values.
          - See full explanation in tears.create_full_tear_sheet.
+    turnover_denom : str, optional
+        Either AGB or portfolio_value, default AGB.
+        - See full explanation in txn.get_turnover.
     legend_loc : matplotlib.loc, optional
         The location of the legend on the plot.
     ax : matplotlib.Axes, optional
@@ -1360,7 +1367,7 @@ def plot_turnover(returns, transactions, positions,
     y_axis_formatter = FuncFormatter(utils.two_dec_places)
     ax.yaxis.set_major_formatter(FuncFormatter(y_axis_formatter))
 
-    df_turnover = txn.get_turnover(positions, transactions)
+    df_turnover = txn.get_turnover(positions, transactions, turnover_denom)
     df_turnover_by_month = df_turnover.resample("M").mean()
     df_turnover.plot(color='steelblue', alpha=1.0, lw=0.5, ax=ax, **kwargs)
     df_turnover_by_month.plot(
@@ -1371,14 +1378,14 @@ def plot_turnover(returns, transactions, positions,
         **kwargs)
     ax.axhline(
         df_turnover.mean(), color='steelblue', linestyle='--', lw=3, alpha=1.0)
-    ax.legend(['日换手率',
-               '月平均换手率',
-               '平均净换手率'],
+    ax.legend(['Daily turnover',
+               'Average daily turnover, by month',
+               'Average daily turnover, net'],
               loc=legend_loc, frameon=True, framealpha=0.5)
-    ax.set_title('日换手率')
+    ax.set_title('Daily turnover')
     ax.set_xlim((returns.index[0], returns.index[-1]))
     ax.set_ylim((0, 2))
-    ax.set_ylabel('换手率')
+    ax.set_ylabel('Turnover')
     ax.set_xlabel('')
     return ax
 
@@ -1426,7 +1433,7 @@ def plot_slippage_sweep(returns, positions, transactions,
 
     slippage_sweep.plot(alpha=1.0, lw=0.5, ax=ax)
 
-    ax.set_title('给定额外每元滑点下的累积收益率')
+    ax.set_title('Cumulative returns given additional per-dollar slippage')
     ax.set_ylabel('')
 
     ax.legend(loc='center left', frameon=True, framealpha=0.5)
@@ -1473,10 +1480,10 @@ def plot_slippage_sensitivity(returns, positions, transactions,
 
     avg_returns_given_slippage.plot(alpha=1.0, lw=2, ax=ax)
 
-    ax.set_title('给定额外每元滑点下的平均年收益率')
+    ax.set_title('Average annual returns given additional per-dollar slippage')
     ax.set_xticks(np.arange(0, 100, 10))
-    ax.set_ylabel('平均年收益率')
-    ax.set_xlabel('每元滑点(bps)')
+    ax.set_ylabel('Average annual return')
+    ax.set_xlabel('Per-dollar slippage (bps)')
 
     return ax
 
@@ -1506,14 +1513,14 @@ def plot_capacity_sweep(returns, transactions, market_data,
         ax = plt.gca()
 
     captial_base_sweep.plot(ax=ax)
-    ax.set_xlabel('基础投资($mm)')
-    ax.set_ylabel('夏普比率')
-    ax.set_title('投资业绩扫描')
+    ax.set_xlabel('Capital base ($mm)')
+    ax.set_ylabel('Sharpe ratio')
+    ax.set_title('Capital base performance sweep')
 
     return ax
 
 
-def plot_daily_turnover_hist(transactions, positions,
+def plot_daily_turnover_hist(transactions, positions, turnover_denom='AGB',
                              ax=None, **kwargs):
     """
     Plots a histogram of daily turnover rates.
@@ -1526,6 +1533,9 @@ def plot_daily_turnover_hist(transactions, positions,
     positions : pd.DataFrame
         Daily net position values.
          - See full explanation in tears.create_full_tear_sheet.
+    turnover_denom : str, optional
+        Either AGB or portfolio_value, default AGB.
+        - See full explanation in txn.get_turnover.
     ax : matplotlib.Axes, optional
         Axes upon which to plot.
     **kwargs, optional
@@ -1539,10 +1549,10 @@ def plot_daily_turnover_hist(transactions, positions,
 
     if ax is None:
         ax = plt.gca()
-    turnover = txn.get_turnover(positions, transactions)
+    turnover = txn.get_turnover(positions, transactions, turnover_denom)
     sns.distplot(turnover, ax=ax, **kwargs)
-    ax.set_title('每日换手比率分布')
-    ax.set_xlabel('换手比率')
+    ax.set_title('Distribution of daily turnover rates')
+    ax.set_xlabel('Turnover rate')
     return ax
 
 
@@ -1577,9 +1587,9 @@ def plot_daily_volume(returns, transactions, ax=None, **kwargs):
     daily_txn.txn_shares.plot(alpha=1.0, lw=0.5, ax=ax, **kwargs)
     ax.axhline(daily_txn.txn_shares.mean(), color='steelblue',
                linestyle='--', lw=3, alpha=1.0)
-    ax.set_title('每日交易量')
+    ax.set_title('Daily trading volume')
     ax.set_xlim((returns.index[0], returns.index[-1]))
-    ax.set_ylabel('交易的股票金额')
+    ax.set_ylabel('Amount of shares traded')
     ax.set_xlabel('')
     return ax
 
@@ -1636,8 +1646,8 @@ def plot_txn_time_hist(transactions, bin_minutes=5, tz='America/New_York',
     ax.set_xlim(570, 960)
     ax.set_xticks(txn_time.index[::int(30 / bin_minutes)])
     ax.set_xticklabels(txn_time.time_str[::int(30 / bin_minutes)])
-    ax.set_title('交易时间分布')
-    ax.set_ylabel('比例')
+    ax.set_title('Transaction time distribution')
+    ax.set_ylabel('Proportion')
     ax.set_xlabel('')
     return ax
 
@@ -1660,8 +1670,8 @@ def show_worst_drawdown_periods(returns, top=5):
 
     drawdown_df = timeseries.gen_drawdown_table(returns, top=top)
     utils.print_table(
-        drawdown_df.sort_values('净回撤（%）', ascending=False),
-        name='最差的亏损期',
+        drawdown_df.sort_values('Net drawdown in %', ascending=False),
+        name='Worst drawdown periods',
         float_format='{0:.2f}'.format,
     )
 
@@ -1763,8 +1773,8 @@ def plot_round_trip_lifetimes(round_trips, disp_amount=16, lsize=18, ax=None):
     ax.set_yticklabels([utils.format_asset(s) for s in sample])
 
     ax.set_ylim((-0.5, min(len(sample), disp_amount) - 0.5))
-    blue = patches.Rectangle([0, 0], 1, 1, color='b', label='多头')
-    red = patches.Rectangle([0, 0], 1, 1, color='r', label='空头')
+    blue = patches.Rectangle([0, 0], 1, 1, color='b', label='Long')
+    red = patches.Rectangle([0, 0], 1, 1, color='r', label='Short')
     leg = ax.legend(handles=[blue, red], loc='lower left',
                     frameon=True, framealpha=0.5)
     leg.get_frame().set_edgecolor('black')
@@ -1802,7 +1812,7 @@ def show_profit_attribution(round_trips):
             inplace=False,
             ascending=False,
         ),
-        name='分项盈利能力（单项盈亏 / 盈亏总计）',
+        name='Profitability (PnL / PnL total) per name',
         float_format='{:.2%}'.format,
     )
 
@@ -1846,8 +1856,8 @@ def plot_prob_profit_trade(round_trips, ax=None):
     ax.axvline(lower_perc, color='0.5')
     ax.axvline(upper_perc, color='0.5')
 
-    ax.set_xlabel('做出盈利决定的可能性')
-    ax.set_ylabel('想法')
+    ax.set_xlabel('Probability of making a profitable decision')
+    ax.set_ylabel('Belief')
     ax.set_xlim(lower_plot, upper_plot)
     ax.set_ylim((0, y.max() + 1.))
 
