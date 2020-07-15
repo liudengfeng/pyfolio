@@ -23,44 +23,44 @@ import numpy as np
 from .utils import print_table, format_asset
 
 PNL_STATS = OrderedDict(
-    [('净利润', lambda x: x.sum()),
-     ('盈利部分合计', lambda x: x[x > 0].sum()),
-     ('亏损部分合计', lambda x: x[x < 0].sum()),
-     ('盈亏比率', lambda x: x[x > 0].sum() / x[x < 0].abs().sum()
+    [('Total profit', lambda x: x.sum()),
+     ('Gross profit', lambda x: x[x > 0].sum()),
+     ('Gross loss', lambda x: x[x < 0].sum()),
+     ('Profit factor', lambda x: x[x > 0].sum() / x[x < 0].abs().sum()
       if x[x < 0].abs().sum() != 0 else np.nan),
-     ('平均交易净利润', 'mean'),
-     ('盈利部分平均数', lambda x: x[x > 0].mean()),
-     ('亏损部分平均数', lambda x: x[x < 0].mean()),
-     ('平均盈亏比率', lambda x: x[x > 0].mean() /
+     ('Avg. trade net profit', 'mean'),
+     ('Avg. winning trade', lambda x: x[x > 0].mean()),
+     ('Avg. losing trade', lambda x: x[x < 0].mean()),
+     ('Ratio Avg. Win:Avg. Loss', lambda x: x[x > 0].mean() /
       x[x < 0].abs().mean() if x[x < 0].abs().mean() != 0 else np.nan),
-     ('最大盈利交易', 'max'),
-     ('最大亏损交易', 'min'),
+     ('Largest winning trade', 'max'),
+     ('Largest losing trade', 'min'),
      ])
 
 SUMMARY_STATS = OrderedDict(
-    [('回合总数', 'count'),
-     ('盈利百分比', lambda x: len(x[x > 0]) / float(len(x))),
-     ('盈利次数', lambda x: len(x[x > 0])),
-     ('亏损次数', lambda x: len(x[x < 0])),
-     ('持平次数', lambda x: len(x[x == 0])),
+    [('Total number of round_trips', 'count'),
+     ('Percent profitable', lambda x: len(x[x > 0]) / float(len(x))),
+     ('Winning round_trips', lambda x: len(x[x > 0])),
+     ('Losing round_trips', lambda x: len(x[x < 0])),
+     ('Even round_trips', lambda x: len(x[x == 0])),
      ])
 
 RETURN_STATS = OrderedDict(
-    [('所有回合的平均收益率', lambda x: x.mean()),
-     ('盈利部分平均收益率', lambda x: x[x > 0].mean()),
-     ('亏损部分平均收益率', lambda x: x[x < 0].mean()),
-     ('所有回合收益率中位数', lambda x: x.median()),
-     ('盈利部分收益率中位数', lambda x: x[x > 0].median()),
-     ('亏损部分收益率中位数', lambda x: x[x < 0].median()),
-     ('单次最大盈利收益率', 'max'),
-     ('单次最大亏损收益率', 'min'),
+    [('Avg returns all round_trips', lambda x: x.mean()),
+     ('Avg returns winning', lambda x: x[x > 0].mean()),
+     ('Avg returns losing', lambda x: x[x < 0].mean()),
+     ('Median returns all round_trips', lambda x: x.median()),
+     ('Median returns winning', lambda x: x[x > 0].median()),
+     ('Median returns losing', lambda x: x[x < 0].median()),
+     ('Largest winning trade', 'max'),
+     ('Largest losing trade', 'min'),
      ])
 
 DURATION_STATS = OrderedDict(
-    [('平均周期', lambda x: x.mean()),
-     ('中位数周期', lambda x: x.median()),
-     ('最长周期', lambda x: x.max()),
-     ('最短周期', lambda x: x.min())
+    [('Avg duration', lambda x: x.mean()),
+     ('Median duration', lambda x: x.median()),
+     ('Longest duration', lambda x: x.max()),
+     ('Shortest duration', lambda x: x.min())
      #  FIXME: Instead of x.max() - x.min() this should be
      #  rts.close_dt.max() - rts.open_dt.min() which is not
      #  available here. As it would require a new approach here
@@ -79,15 +79,13 @@ def agg_all_long_short(round_trips, col, stats_dict):
                  .groupby('ones')[col]
                  .agg(stats_dict)
                  .T
-                 .rename_axis({1.0: '全部交易'},
-                              axis='columns'))
+                 .rename(columns={1.0: 'All trades'}))
     stats_long_short = (round_trips
                         .groupby('long')[col]
                         .agg(stats_dict)
                         .T
-                        .rename_axis({False: '空头交易',
-                                      True: '多头交易'},
-                                     axis='columns'))
+                        .rename(columns={False: 'Short trades',
+                                         True: 'Long trades'}))
 
     return stats_all.join(stats_long_short)
 
@@ -130,11 +128,11 @@ def _groupby_consecutive(txn, max_delta=pd.Timedelta('8h')):
             1) != t.order_sign).astype(int).cumsum()
         t['block_time'] = ((t.dt.sub(t.dt.shift(1))) >
                            max_delta).astype(int).cumsum()
-        grouped_price = (t.groupby(('block_dir',
-                                   'block_time'))
+        grouped_price = (t.groupby(['block_dir',
+                                   'block_time'])
                           .apply(vwap))
         grouped_price.name = 'price'
-        grouped_rest = t.groupby(('block_dir', 'block_time')).agg({
+        grouped_rest = t.groupby(['block_dir', 'block_time']).agg({
             'amount': 'sum',
             'symbol': 'first',
             'dt': 'first'})
@@ -265,8 +263,9 @@ def extract_round_trips(transactions,
                                                                  minute=0,
                                                                  second=0))
 
-        # tmp = roundtrips.join(pv, on='date', lsuffix='_')
-        tmp = pd.merge(roundtrips, pv, 'left', on='date')
+        tmp = (roundtrips.set_index('date')
+                         .join(pv.set_index('date'), lsuffix='_')
+                         .reset_index())
 
         roundtrips['returns'] = tmp.pnl / tmp.portfolio_value
         roundtrips = roundtrips.drop('date', axis='columns')
@@ -308,9 +307,11 @@ def add_closing_transactions(positions, transactions):
         ending_amount = txn_sym.amount.sum()
 
         ending_price = ending_val / ending_amount
-        closing_txn = {'symbol': sym,
-                       'amount': -ending_amount,
-                       'price': ending_price}
+        closing_txn = OrderedDict([
+            ('amount', -ending_amount),
+            ('price', ending_price),
+            ('symbol', sym),
+        ])
 
         closing_txn = pd.DataFrame(closing_txn, index=[end_dt])
         closed_txns = closed_txns.append(closing_txn)
@@ -400,7 +401,7 @@ def print_round_trip_stats(round_trips, hide_pos=False):
     stats = gen_round_trip_stats(round_trips)
 
     print_table(stats['summary'], float_format='{:.2f}'.format,
-                name='摘要统计信息')
+                name='统计摘要')
     print_table(stats['pnl'], float_format='${:.2f}'.format, name='PnL stats')
     print_table(stats['duration'], float_format='{:.2f}'.format,
                 name='Duration stats')
