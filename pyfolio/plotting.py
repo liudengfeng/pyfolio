@@ -2085,12 +2085,14 @@ def plot_monthly_returns_timeseries(returns, fig=None, **kwargs):
     monthly_rets = returns.resample('M').apply(lambda x: cumulate_returns(x))
     monthly_rets = monthly_rets.to_period()
 
-    sns.barplot(x=monthly_rets.index,
-                y=monthly_rets.values,
-                color='steelblue')
+    fig.add_trace(
+        go.Bar(
+            y=monthly_rets.values,
+            marker_color='steelblue',
+        )
+    )
 
-    _, labels = plt.xticks()
-    plt.setp(labels, rotation=90)
+    fig.update_layout(xaxis_tickangle=90)
 
     # only show x-labels on year boundary
     xticks_coord = []
@@ -2098,18 +2100,52 @@ def plot_monthly_returns_timeseries(returns, fig=None, **kwargs):
     count = 0
     for i in monthly_rets.index:
         if i.month == 1:
-            xticks_label.append(i)
+            xticks_label.append(str(i))
             xticks_coord.append(count)
             # plot yearly boundary line
-            ax.axvline(count, color='gray', ls='--', alpha=0.3)
+            fig.add_shape(
+                # Line Vertical
+                dict(
+                    type="line",
+                    yref="paper",
+                    opacity=0.3,
+                    x0=count,
+                    y0=0,
+                    x1=count,
+                    y1=0.01,
+                    line=dict(
+                        color='gray',
+                        dash='dash',
+                    )
+                )
+            )
 
         count += 1
 
-    ax.axhline(0.0, color='darkgray', ls='-')
-    ax.set_xticks(xticks_coord)
-    ax.set_xticklabels(xticks_label)
+    fig.add_shape(
+        # 水平线
+        dict(
+            type="line",
+            x0=0,
+            y0=0,
+            x1=len(monthly_rets),
+            y1=0,
+            line=dict(
+                color='darkgray',
+                dash='dash',
+            )
+        )
+    )
 
-    return ax
+    fig.update_xaxes(
+        ticktext=xticks_label,
+        tickvals=xticks_coord,
+    )
+    fig.update_yaxes(
+        tickformat='%',
+    )
+    fig.update_layout(title_text='月度收益率时间序列')
+    return fig
 
 
 def plot_round_trip_lifetimes(round_trips, disp_amount=16, lsize=18, fig=None):
@@ -2365,13 +2401,8 @@ def plot_cones(name, bounds, oos_returns, num_samples=1000, fig=None,
     fig : matplotlib.figure
         The figure instance which contains all the plot elements.
     """
-
-    if ax is None:
-        fig = figure.Figure(figsize=(10, 8))
-        FigureCanvasAgg(fig)
-        axes = fig.add_subplot(111)
-    else:
-        axes = ax
+    if fig is None:
+        fig = go.Figure()
 
     returns = ep.cum_returns(oos_returns, starting_value=1.)
     bounds_tmp = bounds.copy()
@@ -2394,19 +2425,54 @@ def plot_cones(name, bounds, oos_returns, num_samples=1000, fig=None,
             x = returns_tmp.index
             y1 = bounds_tmp[float(std)].iloc[:len(returns_tmp)]
             y2 = bounds_tmp[float(-std)].iloc[:len(returns_tmp)]
-            axes.fill_between(x, y1, y2, color=colors[c], alpha=0.5)
+            # axes.fill_between(x, y1, y2, color=colors[c], alpha=0.5)
+            fig.add_shape(
+                # filled Rectangle
+                type="rect",
+                opacity=0.5,
+                x0=x,
+                y0=y1,
+                x1=x,
+                y1=y2,
+                fillcolor=colors[c],
+            )
 
     # Plot returns line graph
-    label = 'Cumulative returns = {:.2f}%'.format((returns.iloc[-1] - 1) * 100)
-    axes.plot(returns.index, returns.values, color='black', lw=3.,
-              label=label)
-
+    label = '累积收益率 = {:.2f}%'.format((returns.iloc[-1] - 1) * 100)
+    # axes.plot(returns.index, returns.values, color='black', lw=3.,
+    #           label=label)
+    fig.add_trace(
+        go.Scatter(x=returns.index,
+                   y=returns.values,
+                   name=label,
+                   line=dict(color='black', width=3),
+                   mode='lines'),
+    )
     if name is not None:
-        axes.set_title(name)
-    axes.axhline(1, color='black', alpha=0.2)
-    axes.legend(frameon=True, framealpha=0.5)
+        # axes.set_title(name)
+        fig.update_layout(title_text=name)
 
-    if ax is None:
-        return fig
-    else:
-        return axes
+    # axes.axhline(1, color='black', alpha=0.2)
+    fig.add_shape(
+        dict(
+            type="line",
+            opacity=0.2,
+            x0=returns.index.min(),
+            y0=1,
+            x1=returns.index.max(),
+            y1=1,
+            line=dict(
+                color='black',
+            )
+        )
+    )
+    # axes.legend(frameon=True, framealpha=0.5)
+    fig.update_layout(
+        legend=dict(
+            x=0.01,
+            y=0.50,
+            yanchor="middle",
+            xanchor="left",
+        )
+    )
+    return fig
