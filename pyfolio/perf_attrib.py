@@ -18,11 +18,11 @@ import warnings
 from collections import OrderedDict
 import empyrical as ep
 import pandas as pd
-import matplotlib.pyplot as plt
-
+# import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 from .pos import get_percent_alloc
 from .txn import get_turnover
-from .utils import print_table, configure_legend
+from .utils import print_table, _date_tickformat, configure_legend
 
 PERF_ATTRIB_TURNOVER_THRESHOLD = 0.25
 
@@ -226,21 +226,21 @@ def create_perf_attrib_stats(perf_attrib, risk_exposures):
     specific_returns = perf_attrib['specific_returns']
     common_returns = perf_attrib['common_returns']
 
-    summary['Annualized Specific Return'] =\
+    summary['年化特定收益率'] =\
         ep.annual_return(specific_returns)
-    summary['Annualized Common Return'] =\
+    summary['年化共同收益率'] =\
         ep.annual_return(common_returns)
-    summary['Annualized Total Return'] =\
+    summary['年化总收益率'] =\
         ep.annual_return(total_returns)
 
-    summary['Specific Sharpe Ratio'] =\
+    summary['特定夏普比率'] =\
         ep.sharpe_ratio(specific_returns)
 
-    summary['Cumulative Specific Return'] =\
+    summary['累积特定收益率'] =\
         ep.cum_returns_final(specific_returns)
-    summary['Cumulative Common Return'] =\
+    summary['累积共同收益率'] =\
         ep.cum_returns_final(common_returns)
-    summary['Total Returns'] =\
+    summary['总收益率'] =\
         ep.cum_returns_final(total_returns)
 
     summary = pd.Series(summary, name='')
@@ -253,11 +253,11 @@ def create_perf_attrib_stats(perf_attrib, risk_exposures):
     risk_exposure_summary = pd.DataFrame(
         data=OrderedDict([
             (
-                'Average Risk Factor Exposure',
+                '平均风险敞口',
                 risk_exposures.mean(axis='rows')
             ),
-            ('Annualized Return', annualized_returns_by_factor),
-            ('Cumulative Return', cumulative_returns_by_factor),
+            ('年化收益率', annualized_returns_by_factor),
+            ('累积收益率', cumulative_returns_by_factor),
         ]),
         index=risk_exposures.columns,
     )
@@ -290,40 +290,40 @@ def show_perf_attrib_stats(returns,
     percentage_formatter = '{:.2%}'.format
     float_formatter = '{:.2f}'.format
 
-    summary_stats = perf_attrib_stats.loc[['Annualized Specific Return',
-                                           'Annualized Common Return',
-                                           'Annualized Total Return',
-                                           'Specific Sharpe Ratio']]
+    summary_stats = perf_attrib_stats.loc[['年化特定收益率',
+                                           '年化共同收益率',
+                                           '年化总收益率',
+                                           '特定夏普比率']]
 
     # Format return rows in summary stats table as percentages.
     for col_name in (
-        'Annualized Specific Return',
-        'Annualized Common Return',
-        'Annualized Total Return',
+        '年化特定收益率',
+        '年化共同收益率',
+        '年化总收益率',
     ):
         summary_stats[col_name] = percentage_formatter(summary_stats[col_name])
 
     # Display sharpe to two decimal places.
-    summary_stats['Specific Sharpe Ratio'] = float_formatter(
-        summary_stats['Specific Sharpe Ratio']
+    summary_stats['特定夏普比率'] = float_formatter(
+        summary_stats['特定夏普比率']
     )
 
-    print_table(summary_stats, name='Summary Statistics')
+    print_table(summary_stats, name='统计摘要')
 
     print_table(
         risk_exposure_stats,
-        name='Exposures Summary',
+        name='风险敞口摘要',
         # In exposures table, format exposure column to 2 decimal places, and
         # return columns  as percentages.
         formatters={
-            'Average Risk Factor Exposure': float_formatter,
-            'Annualized Return': percentage_formatter,
-            'Cumulative Return': percentage_formatter,
+            '平均风险敞口': float_formatter,
+            '年化收益率': percentage_formatter,
+            '累积收益率': percentage_formatter,
         },
     )
 
 
-def plot_returns(perf_attrib_data, cost=None, ax=None):
+def plot_returns(perf_attrib_data, cost=None, fig=None):
     """
     Plot total, specific, and common returns.
 
@@ -351,42 +351,63 @@ def plot_returns(perf_attrib_data, cost=None, ax=None):
     ax :  matplotlib.axes.Axes
     """
 
-    if ax is None:
-        ax = plt.gca()
+    if fig is None:
+        fig = go.Figure()
 
     returns = perf_attrib_data['total_returns']
-    total_returns_label = 'Total returns'
+    total_returns_label = '总收益率'
 
     cumulative_returns_less_costs = _cumulative_returns_less_costs(
         returns,
         cost
     )
     if cost is not None:
-        total_returns_label += ' (adjusted)'
+        total_returns_label += ' (调整后)'
 
     specific_returns = perf_attrib_data['specific_returns']
     common_returns = perf_attrib_data['common_returns']
 
-    ax.plot(cumulative_returns_less_costs, color='b',
-            label=total_returns_label)
-    ax.plot(ep.cum_returns(specific_returns), color='g',
-            label='Cumulative specific returns')
-    ax.plot(ep.cum_returns(common_returns), color='r',
-            label='Cumulative common returns')
+    fig.add_trace(
+        go.Scatter(x=cumulative_returns_less_costs.index,
+                   y=cumulative_returns_less_costs.values,
+                   mode='lines',
+                   name=total_returns_label,
+                   line=dict(color='blue')),
+    )
 
+    cum_returns = ep.cum_returns(specific_returns)
+    fig.add_trace(
+        go.Scatter(x=cum_returns.index,
+                   y=cum_returns.values,
+                   mode='lines',
+                   name='累积特定收益率',
+                   line=dict(color='green')),
+    )
+    cum_returns = ep.cum_returns(common_returns)
+    fig.add_trace(
+        go.Scatter(x=cum_returns.index,
+                   y=cum_returns.values,
+                   mode='lines',
+                   name='累积共同收益率',
+                   line=dict(color='red')),
+    )
     if cost is not None:
-        ax.plot(-ep.cum_returns(cost), color='k',
-                label='Cumulative cost spent')
+        s = -ep.cum_returns(cost)
+        fig.add_trace(
+            go.Scatter(x=s.index,
+                       y=s.values,
+                       mode='lines',
+                       name='累计花费',
+                       line=dict(color='black')),
+        )
 
-    ax.set_title('Time series of cumulative returns')
-    ax.set_ylabel('Returns')
-
-    configure_legend(ax)
-
-    return ax
+    fig.update_yaxes(title_text='收益率')
+    fig.update_layout(title_text="累积收益率时间序列")
+    configure_legend(fig)
+    return fig
 
 
-def plot_alpha_returns(alpha_returns, ax=None):
+def plot_alpha_returns(alpha_returns, fig=None):
     """
     Plot histogram of daily multi-factor alpha returns (specific returns).
 
@@ -402,24 +423,62 @@ def plot_alpha_returns(alpha_returns, ax=None):
     -------
     ax :  matplotlib.axes.Axes
     """
-    if ax is None:
-        ax = plt.gca()
+    if fig is None:
+        fig = go.Figure()
 
-    ax.hist(alpha_returns, color='g', label='Multi-factor alpha')
-    ax.set_title('Histogram of alphas')
-    ax.axvline(0, color='k', linestyle='--', label='Zero')
+    title = '阿尔法直方图'
+    fig.add_trace(
+        go.Histogram(
+            x=alpha_returns.values,
+            name='多因子alpha',
+            marker_color='green',
+        )
+    )
+
+    fig.add_shape(
+        dict(
+            type="line",
+            # xref="paper",
+            yref="paper",
+            name='基线',
+            x0=0,
+            y0=0,
+            x1=0,
+            y1=1,
+            line=dict(
+                color='black',
+                dash='dash',
+            )
+        )
+    )
 
     avg = alpha_returns.mean()
-    ax.axvline(avg, color='b', label='Mean = {: 0.5f}'.format(avg))
-    configure_legend(ax)
 
-    return ax
+    fig.add_shape(
+        dict(
+            type="line",
+            yref="paper",
+            name='均值 = {: 0.5f}'.format(avg),
+            x0=avg,
+            y0=0,
+            x1=avg,
+            y1=1,
+            line=dict(
+                color='blue',
+            )
+        )
+    )
+    
+    fig.update_layout(title_text=title)
+    configure_legend(fig, autofmt_xdate=False)
+
+    return fig
 
 
 def plot_factor_contribution_to_perf(
         perf_attrib_data,
-        ax=None,
-        title='Cumulative common returns attribution',
+        fig=None,
+        title='累积共同收益率归因',
 ):
     """
     Plot each factor's contribution to performance.
@@ -445,8 +504,8 @@ def plot_factor_contribution_to_perf(
     -------
     ax :  matplotlib.axes.Axes
     """
-    if ax is None:
-        ax = plt.gca()
+    if fig is None:
+        fig = go.Figure()
 
     factors_to_plot = perf_attrib_data.drop(
         ['total_returns', 'common_returns', 'tilt_returns', 'timing_returns'],
@@ -458,18 +517,38 @@ def plot_factor_contribution_to_perf(
         factors_cumulative[factor] = ep.cum_returns(factors_to_plot[factor])
 
     for col in factors_cumulative:
-        ax.plot(factors_cumulative[col])
+        # ax.plot(factors_cumulative[col])
+        s = factors_cumulative[col]
+        fig.add_trace(
+            go.Scatter(x=s.index,
+                       y=s.values,
+                       mode='lines',
+                       name=col),
+        )
 
-    ax.axhline(0, color='k')
-    configure_legend(ax, change_colors=True)
+    # ax.axhline(0, color='k')
+    fig.add_shape(
+        dict(
+            type="line",
+            x0=factors_cumulative.index.min(),
+            y0=0,
+            x1=factors_cumulative.index.max(),
+            y1=0,
+            line=dict(
+                color='black',
+            )
+        )
+    )
 
-    ax.set_ylabel('Cumulative returns by factor')
-    ax.set_title(title)
+    configure_legend(fig)
 
-    return ax
+    fig.update_yaxes(title_text='因子分组的累积收益率')
+    fig.update_layout(title_text=title)
+
+    return fig
 
 
-def plot_risk_exposures(exposures, ax=None,
+def plot_risk_exposures(exposures, fig=None,
                         title='Daily risk factor exposures'):
     """
     Parameters
@@ -489,17 +568,23 @@ def plot_risk_exposures(exposures, ax=None,
     -------
     ax :  matplotlib.axes.Axes
     """
-    if ax is None:
-        ax = plt.gca()
+    if fig is None:
+        fig = go.Figure()
 
     for col in exposures:
-        ax.plot(exposures[col])
+        # ax.plot(exposures[col])
+        s = exposures[col]
+        fig.add_trace(
+            go.Scatter(x=s.index,
+                       y=s.values,
+                       mode='lines',
+                       name=col),
+        )
+    configure_legend(fig)
 
-    configure_legend(ax, change_colors=True)
-    ax.set_ylabel('Factor exposures')
-    ax.set_title(title)
-
-    return ax
+    fig.update_yaxes(title_text='因子敞口')
+    fig.update_layout(title_text=title)
+    return fig
 
 
 def _align_and_warn(returns,

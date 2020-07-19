@@ -2,7 +2,7 @@ from __future__ import division
 
 import os
 from unittest import TestCase
-from nose_parameterized import parameterized
+from parameterized import parameterized
 from numpy.testing import assert_allclose, assert_almost_equal
 from pandas.testing import assert_series_equal
 
@@ -31,7 +31,7 @@ class TestDrawdown(TestCase):
     def test_get_max_drawdown_begins_first_day(self, px):
         rets = px.pct_change()
         drawdowns = timeseries.gen_drawdown_table(rets, top=1)
-        self.assertEqual(drawdowns.loc[0, 'Net drawdown in %'], 25)
+        self.assertEqual(drawdowns.loc[0, '净回撤百分比%'], 25)
 
     drawdown_list = np.array(
         [100, 110, 120, 150, 180, 200, 100, 120,
@@ -66,7 +66,7 @@ class TestDrawdown(TestCase):
 
         drawdowns = timeseries.gen_drawdown_table(rets, top=2)
 
-        self.assertEqual(np.round(drawdowns.loc[0, 'Net drawdown in %']),
+        self.assertEqual(np.round(drawdowns.loc[0, '净回撤百分比%']),
                          first_net_drawdown)
         self.assertEqual(drawdowns.loc[0, 'Peak date'],
                          first_expected_peak)
@@ -75,7 +75,7 @@ class TestDrawdown(TestCase):
         self.assertEqual(drawdowns.loc[0, 'Recovery date'],
                          first_expected_recovery)
 
-        self.assertEqual(np.round(drawdowns.loc[1, 'Net drawdown in %']),
+        self.assertEqual(np.round(drawdowns.loc[1, '净回撤百分比%']),
                          second_net_drawdown)
         self.assertEqual(drawdowns.loc[1, 'Peak date'],
                          second_expected_peak)

@@ -1,5 +1,5 @@
 from unittest import TestCase
-from nose_parameterized import parameterized
+from parameterized import parameterized
 from collections import OrderedDict
 import os
 import gzip
@@ -127,18 +127,18 @@ class PositionsTestCase(TestCase):
         (DataFrame([[1.0, 2.0, 3.0, 14.0]]*len(dates),
                    columns=[0, 1, 2, 'cash'], index=dates),
          DataFrame([[0.15, 0.1, nan, nan]]*len(dates),
-                   columns=['max_long', 'median_long',
-                            'median_short', 'max_short'], index=dates)),
+                   columns=['多头最大值', '多头中位数',
+                            '空头中位数', '空头最大值'], index=dates)),
         (DataFrame([[1.0, -2.0, -13.0, 15.0]]*len(dates),
                    columns=[0, 1, 2, 'cash'], index=dates),
          DataFrame([[1.0, 1.0, -7.5, -13.0]]*len(dates),
-                   columns=['max_long', 'median_long',
-                            'median_short', 'max_short'], index=dates)),
+                   columns=['多头最大值', '多头中位数',
+                            '空头中位数', '空头最大值'], index=dates)),
         (DataFrame([[nan, 2.0, nan, 8.0]]*len(dates),
                    columns=[0, 1, 2, 'cash'], index=dates),
          DataFrame([[0.2, 0.2, nan, nan]]*len(dates),
-                   columns=['max_long', 'median_long',
-                            'median_short', 'max_short'], index=dates))
+                   columns=['多头最大值', '多头中位数',
+                            '空头中位数', '空头最大值'], index=dates))
     ])
     def test_max_median_exposure(self, positions, expected):
         alloc_summary = get_max_median_position_concentration(positions)

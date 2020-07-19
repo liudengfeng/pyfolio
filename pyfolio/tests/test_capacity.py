@@ -1,12 +1,12 @@
 from __future__ import division
 from unittest import TestCase
-from nose_parameterized import parameterized
-
+from parameterized import parameterized
+from datetime import datetime
 from pandas import (
     Series,
     DataFrame,
     date_range,
-    datetime,
+    # datetime,
     concat
 )
 from pandas.testing import (assert_frame_equal,

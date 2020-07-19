@@ -16,51 +16,51 @@ from __future__ import division
 from math import copysign
 import warnings
 from collections import deque, OrderedDict
-
+from tqdm import tqdm
 import pandas as pd
 import numpy as np
 
 from .utils import print_table, format_asset
 
 PNL_STATS = OrderedDict(
-    [('Total profit', lambda x: x.sum()),
-     ('Gross profit', lambda x: x[x > 0].sum()),
-     ('Gross loss', lambda x: x[x < 0].sum()),
-     ('Profit factor', lambda x: x[x > 0].sum() / x[x < 0].abs().sum()
+    [('盈亏总计', lambda x: x.sum()),
+     ('收益合计', lambda x: x[x > 0].sum()),
+     ('亏损合计', lambda x: x[x < 0].sum()),
+     ('盈亏次数比率', lambda x: x[x > 0].sum() / x[x < 0].abs().sum()
       if x[x < 0].abs().sum() != 0 else np.nan),
-     ('Avg. trade net profit', 'mean'),
-     ('Avg. winning trade', lambda x: x[x > 0].mean()),
-     ('Avg. losing trade', lambda x: x[x < 0].mean()),
-     ('Ratio Avg. Win:Avg. Loss', lambda x: x[x > 0].mean() /
+     ('盈亏平均值', 'mean'),
+     ('盈利平均值', lambda x: x[x > 0].mean()),
+     ('亏损平均值', lambda x: x[x < 0].mean()),
+     ('盈亏平均值比率', lambda x: x[x > 0].mean() /
       x[x < 0].abs().mean() if x[x < 0].abs().mean() != 0 else np.nan),
-     ('Largest winning trade', 'max'),
-     ('Largest losing trade', 'min'),
+     ('交易最大盈利', 'max'),
+     ('交易最大亏损', 'min'),
      ])
 
 SUMMARY_STATS = OrderedDict(
-    [('Total number of round_trips', 'count'),
-     ('Percent profitable', lambda x: len(x[x > 0]) / float(len(x))),
-     ('Winning round_trips', lambda x: len(x[x > 0])),
-     ('Losing round_trips', lambda x: len(x[x < 0])),
-     ('Even round_trips', lambda x: len(x[x == 0])),
+    [('交易总回数', 'count'),
+     ('盈利次数百分比', lambda x: len(x[x > 0]) / float(len(x))),
+     ('盈利回数', lambda x: len(x[x > 0])),
+     ('亏损回数', lambda x: len(x[x < 0])),
+     ('持平回数', lambda x: len(x[x == 0])),
      ])
 
 RETURN_STATS = OrderedDict(
-    [('Avg returns all round_trips', lambda x: x.mean()),
-     ('Avg returns winning', lambda x: x[x > 0].mean()),
-     ('Avg returns losing', lambda x: x[x < 0].mean()),
-     ('Median returns all round_trips', lambda x: x.median()),
-     ('Median returns winning', lambda x: x[x > 0].median()),
-     ('Median returns losing', lambda x: x[x < 0].median()),
-     ('Largest winning trade', 'max'),
-     ('Largest losing trade', 'min'),
+    [('全部回合平均收益率', lambda x: x.mean()),
+     ('盈利回合平均收益率', lambda x: x[x > 0].mean()),
+     ('亏损回合平均收益率', lambda x: x[x < 0].mean()),
+     ('全部回合中位数收益率', lambda x: x.median()),
+     ('盈利回合中位数收益率', lambda x: x[x > 0].median()),
+     ('亏损回合中位数收益率', lambda x: x[x < 0].median()),
+     ('最大收益率', 'max'),
+     ('最大亏损率', 'min'),
      ])
 
 DURATION_STATS = OrderedDict(
-    [('Avg duration', lambda x: x.mean()),
-     ('Median duration', lambda x: x.median()),
-     ('Longest duration', lambda x: x.max()),
-     ('Shortest duration', lambda x: x.min())
+    [('持续时间平均', lambda x: x.mean()),
+     ('持续时间中位数', lambda x: x.median()),
+     ('最长持续时间', lambda x: x.max()),
+     ('最短持续时间', lambda x: x.min())
      #  FIXME: Instead of x.max() - x.min() this should be
      #  rts.close_dt.max() - rts.open_dt.min() which is not
      #  available here. As it would require a new approach here
@@ -77,15 +77,15 @@ def agg_all_long_short(round_trips, col, stats_dict):
     stats_all = (round_trips
                  .assign(ones=1)
                  .groupby('ones')[col]
-                 .agg(stats_dict)
+                 .agg(**stats_dict)
                  .T
-                 .rename(columns={1.0: 'All trades'}))
+                 .rename(columns={1.0: '全部交易'}))
     stats_long_short = (round_trips
                         .groupby('long')[col]
-                        .agg(stats_dict)
+                        .agg(**stats_dict)
                         .T
-                        .rename(columns={False: 'Short trades',
-                                         True: 'Long trades'}))
+                        .rename(columns={False: '空头交易',
+                                         True: '多头交易'}))
 
     return stats_all.join(stats_long_short)
 
@@ -132,10 +132,10 @@ def _groupby_consecutive(txn, max_delta=pd.Timedelta('8h')):
                                     'block_time'])
                          .apply(vwap))
         grouped_price.name = 'price'
-        grouped_rest = t.groupby(['block_dir', 'block_time']).agg({
-            'amount': 'sum',
-            'symbol': 'first',
-            'dt': 'first'})
+        grouped_rest = t.groupby(['block_dir', 'block_time']).agg(
+            amount=pd.NamedAgg(column='amount', aggfunc='sum'),
+            symbol=pd.NamedAgg(column='symbol', aggfunc='first'),
+            dt=pd.NamedAgg(column='dt', aggfunc='first'))
 
         grouped = grouped_rest.join(grouped_price)
 
@@ -195,11 +195,12 @@ def extract_round_trips(transactions,
         rt_returns are the returns in regards to the invested capital
         into that partiulcar round-trip.
     """
-
+    # TODO:耗时较长 3min~4min
     transactions = _groupby_consecutive(transactions)
     roundtrips = []
-
-    for sym, trans_sym in transactions.groupby('symbol'):
+    pbar = tqdm(transactions.groupby('symbol'))
+    for sym, trans_sym in pbar:
+        pbar.set_description("Processing %s" % sym)
         trans_sym = trans_sym.sort_index()
         price_stack = deque()
         dt_stack = deque()
@@ -369,16 +370,16 @@ def gen_round_trip_stats(round_trips):
     """
 
     stats = {}
-    stats['pnl'] = agg_all_long_short(round_trips, 'pnl', PNL_STATS)
-    stats['summary'] = agg_all_long_short(round_trips, 'pnl',
-                                          SUMMARY_STATS)
-    stats['duration'] = agg_all_long_short(round_trips, 'duration',
-                                           DURATION_STATS)
-    stats['returns'] = agg_all_long_short(round_trips, 'returns',
-                                          RETURN_STATS)
+    stats['盈亏'] = agg_all_long_short(round_trips, 'pnl', PNL_STATS)
+    stats['摘要'] = agg_all_long_short(round_trips, 'pnl',
+                                     SUMMARY_STATS)
+    stats['持续时间'] = agg_all_long_short(round_trips, 'duration',
+                                       DURATION_STATS)
+    stats['收益率'] = agg_all_long_short(round_trips, 'returns',
+                                      RETURN_STATS)
 
-    stats['symbols'] = \
-        round_trips.groupby('symbol')['returns'].agg(RETURN_STATS).T
+    stats['股票分列'] = \
+        round_trips.groupby('symbol')['returns'].agg(**RETURN_STATS).T
 
     return stats
 
@@ -400,15 +401,15 @@ def print_round_trip_stats(round_trips, hide_pos=False):
 
     stats = gen_round_trip_stats(round_trips)
 
-    print_table(stats['summary'], float_format='{:.2f}'.format,
+    print_table(stats['摘要'], float_format='{:.2f}'.format,
                 name='统计摘要')
-    print_table(stats['pnl'], float_format='${:.2f}'.format, name='PnL stats')
-    print_table(stats['duration'], float_format='{:.2f}'.format,
-                name='Duration stats')
-    print_table(stats['returns'] * 100, float_format='{:.2f}%'.format,
-                name='Return stats')
+    print_table(stats['盈亏'], float_format='{:.2f}'.format, name='盈亏统计')
+    print_table(stats['持续时间'], float_format='{:.2f}'.format,
+                name='持续时间')
+    print_table(stats['收益率'] * 100, float_format='{:.2f}%'.format,
+                name='收益率统计')
 
     if not hide_pos:
-        stats['symbols'].columns = stats['symbols'].columns.map(format_asset)
-        print_table(stats['symbols'] * 100,
-                    float_format='{:.2f}%'.format, name='Symbol stats')
+        stats['股票分列'].columns = stats['股票分列'].columns.map(format_asset)
+        print_table(stats['股票分列'] * 100,
+                    float_format='{:.2f}%'.format, name='分股票统计')

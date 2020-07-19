@@ -17,36 +17,22 @@ from __future__ import division
 import warnings
 from time import time
 
-import empyrical as ep
-from IPython.display import display, Markdown
-import matplotlib.gridspec as gridspec
-import matplotlib.pyplot as plt
+# import matplotlib.gridspec as gridspec
+# import matplotlib.pyplot as plt
 import pandas as pd
-import os
-from . import _seaborn as sns
-from . import capacity
-from . import perf_attrib
-from . import plotting
-from . import pos
-from . import round_trips
-from . import timeseries
-from . import txn
-from . import utils
-# TODO:直接使用pycuda?MKL 要求
-# 最好的方式是在系统环境变量中设置
-os.environ.setdefault('MKL_THREADING_LAYER', 'GNU')
-# theano GPU Fix lib path
-# 不支持最新版本cudnn
-# os.environ.setdefault('LD_LIBRARY_PATH', 'C:\\tools\\cuda\\lib\\x64')
+import plotly
+import plotly.figure_factory as ff
+import plotly.graph_objects as go
+from IPython.display import Markdown, display
+from plotly.subplots import make_subplots
 
-try:
-    from . import bayesian
-    have_bayesian = True
-except ImportError:
-    warnings.warn(
-        "Could not import bayesian submodule due to missing pymc3 dependency.",
-        ImportWarning)
-    have_bayesian = False
+import empyrical as ep
+
+# import os
+# from . import _seaborn as sns
+from . import (capacity, perf_attrib, plotting, pos, round_trips, timeseries,
+               txn, utils)
+
 FACTOR_PARTITIONS = {
     'style': ['momentum', 'size', 'value', 'reversal_short_term',
               'volatility'],
@@ -55,6 +41,8 @@ FACTOR_PARTITIONS = {
                'utilities', 'communication_services', 'energy', 'industrials',
                'technology']
 }
+
+plotly.offline.init_notebook_mode(connected=True)
 
 
 def timer(msg_body, previous_time):
@@ -81,7 +69,6 @@ def create_full_tear_sheet(returns,
                            bootstrap=False,
                            unadjusted_returns=None,
                            turnover_denom='AGB',
-                           set_context=True,
                            factor_returns=None,
                            factor_loadings=None,
                            pos_in_dollars=True,
@@ -173,9 +160,6 @@ def create_full_tear_sheet(returns,
         indicates whether positions is in dollars
     header_rows : dict or OrderedDict, optional
         Extra rows to display at the top of the perf stats table.
-    set_context : boolean, optional
-        If True, set default plotting style context.
-         - See plotting.context().
     factor_partitions : dict, optional
         dict specifying how factors should be separated in perf attrib
         factor returns and risk exposures plots
@@ -200,25 +184,21 @@ def create_full_tear_sheet(returns,
         benchmark_rets=benchmark_rets,
         bootstrap=bootstrap,
         turnover_denom=turnover_denom,
-        header_rows=header_rows,
-        set_context=set_context)
+        header_rows=header_rows)
 
     create_interesting_times_tear_sheet(returns,
-                                        benchmark_rets=benchmark_rets,
-                                        set_context=set_context)
+                                        benchmark_rets=benchmark_rets)
 
     if positions is not None:
         create_position_tear_sheet(returns, positions,
                                    hide_positions=hide_positions,
-                                   set_context=set_context,
                                    sector_mappings=sector_mappings,
                                    estimate_intraday=False)
 
         if transactions is not None:
             create_txn_tear_sheet(returns, positions, transactions,
                                   unadjusted_returns=unadjusted_returns,
-                                  estimate_intraday=False,
-                                  set_context=set_context)
+                                  estimate_intraday=False)
             if round_trips:
                 create_round_trip_tear_sheet(
                     returns=returns,
@@ -241,7 +221,6 @@ def create_full_tear_sheet(returns,
                                           factor_partitions=factor_partitions)
 
 
-@plotting.customize
 def create_simple_tear_sheet(returns,
                              positions=None,
                              transactions=None,
@@ -322,19 +301,19 @@ def create_simple_tear_sheet(returns,
         returns = txn.adjust_returns_for_slippage(returns, positions,
                                                   transactions, slippage)
 
-    always_sections = 4
-    positions_sections = 4 if positions is not None else 0
-    transactions_sections = 2 if transactions is not None else 0
-    live_sections = 1 if live_start_date is not None else 0
-    benchmark_sections = 1 if benchmark_rets is not None else 0
+    # always_sections = 4
+    # positions_sections = 4 if positions is not None else 0
+    # transactions_sections = 2 if transactions is not None else 0
+    # live_sections = 1 if live_start_date is not None else 0
+    # benchmark_sections = 1 if benchmark_rets is not None else 0
 
-    vertical_sections = sum([
-        always_sections,
-        positions_sections,
-        transactions_sections,
-        live_sections,
-        benchmark_sections,
-    ])
+    # vertical_sections = sum([
+    #     always_sections,
+    #     positions_sections,
+    #     transactions_sections,
+    #     live_sections,
+    #     benchmark_sections,
+    # ])
 
     if live_start_date is not None:
         live_start_date = ep.utils.get_utc_timestamp(live_start_date)
@@ -346,80 +325,104 @@ def create_simple_tear_sheet(returns,
                              turnover_denom=turnover_denom,
                              live_start_date=live_start_date,
                              header_rows=header_rows)
+    figs = []
 
-    fig = plt.figure(figsize=(14, vertical_sections * 6))
-    gs = gridspec.GridSpec(vertical_sections, 3, wspace=0.5, hspace=0.5)
-
-    ax_rolling_returns = plt.subplot(gs[:2, :])
-    i = 2
-    if benchmark_rets is not None:
-        ax_rolling_beta = plt.subplot(gs[i, :], sharex=ax_rolling_returns)
-        i += 1
-    ax_rolling_sharpe = plt.subplot(gs[i, :], sharex=ax_rolling_returns)
-    i += 1
-    ax_underwater = plt.subplot(gs[i, :], sharex=ax_rolling_returns)
-    i += 1
-
-    plotting.plot_rolling_returns(returns,
-                                  factor_returns=benchmark_rets,
-                                  live_start_date=live_start_date,
-                                  cone_std=(1.0, 1.5, 2.0),
-                                  ax=ax_rolling_returns)
-    ax_rolling_returns.set_title('Cumulative returns')
+    ax_rolling_returns = make_subplots()
 
     if benchmark_rets is not None:
-        plotting.plot_rolling_beta(returns, benchmark_rets, ax=ax_rolling_beta)
+        ax_rolling_beta = make_subplots()
+    ax_rolling_sharpe = make_subplots()
 
-    plotting.plot_rolling_sharpe(returns, ax=ax_rolling_sharpe)
+    ax_underwater = make_subplots()
 
-    plotting.plot_drawdown_underwater(returns, ax=ax_underwater)
+    ax_rolling_returns = plotting.plot_rolling_returns(returns,
+                                                       factor_returns=benchmark_rets,
+                                                       live_start_date=live_start_date,
+                                                       cone_std=(
+                                                           1.0, 1.5, 2.0),
+                                                       fig=ax_rolling_returns)
+
+    # ax_rolling_returns.set_title('Cumulative returns')
+    ax_rolling_returns.update_layout(title_text="累积收益率")
+    figs.append(ax_rolling_returns)
+
+    if benchmark_rets is not None:
+        ax_rolling_beta = plotting.plot_rolling_beta(
+            returns, benchmark_rets, fig=ax_rolling_beta)
+        figs.append(ax_rolling_beta)
+    else:
+        ax_rolling_beta = None
+
+    ax_rolling_sharpe = plotting.plot_rolling_sharpe(
+        returns, fig=ax_rolling_sharpe)
+    figs.append(ax_rolling_sharpe)
+
+    ax_underwater = plotting.plot_drawdown_underwater(
+        returns, fig=ax_underwater)
+    figs.append(ax_underwater)
+
+    # 处理共享x轴区域
+    sharex_range = ax_rolling_returns.layout.xaxis.range
+    for fig in [ax_rolling_beta, ax_rolling_sharpe, ax_underwater]:
+        if fig:
+            fig.update_xaxes(range=sharex_range)
 
     if positions is not None:
         # Plot simple positions tear sheet
-        ax_exposures = plt.subplot(gs[i, :])
-        i += 1
-        ax_top_positions = plt.subplot(gs[i, :], sharex=ax_exposures)
-        i += 1
-        ax_holdings = plt.subplot(gs[i, :], sharex=ax_exposures)
-        i += 1
-        ax_long_short_holdings = plt.subplot(gs[i, :])
-        i += 1
+        ax_exposures = make_subplots()
+
+        ax_top_positions = make_subplots()
+
+        ax_holdings = make_subplots()
+
+        ax_long_short_holdings = make_subplots()
 
         positions_alloc = pos.get_percent_alloc(positions)
 
-        plotting.plot_exposures(returns, positions, ax=ax_exposures)
+        ax_exposures = plotting.plot_exposures(
+            returns, positions, fig=ax_exposures)
+        figs.append(ax_exposures)
 
-        plotting.show_and_plot_top_positions(returns,
-                                             positions_alloc,
-                                             show_and_plot=0,
-                                             hide_positions=False,
-                                             ax=ax_top_positions)
+        ax_top_positions = plotting.show_and_plot_top_positions(returns,
+                                                                positions_alloc,
+                                                                show_and_plot=0,
+                                                                hide_positions=False,
+                                                                fig=ax_top_positions)
+        figs.append(ax_top_positions)
 
-        plotting.plot_holdings(returns, positions_alloc, ax=ax_holdings)
+        ax_holdings = plotting.plot_holdings(
+            returns, positions_alloc, fig=ax_holdings)
+        figs.append(ax_holdings)
 
-        plotting.plot_long_short_holdings(returns, positions_alloc,
-                                          ax=ax_long_short_holdings)
+        ax_long_short_holdings = plotting.plot_long_short_holdings(returns, positions_alloc,
+                                                                   fig=ax_long_short_holdings)
+        figs.append(ax_long_short_holdings)
+
+        # 处理共享x轴区域
+        sharex_range = ax_exposures.layout.xaxis.range
+        for fig in [ax_top_positions, ax_holdings]:
+            fig.update_xaxes(range=sharex_range)
 
         if transactions is not None:
             # Plot simple transactions tear sheet
-            ax_turnover = plt.subplot(gs[i, :])
-            i += 1
-            ax_txn_timings = plt.subplot(gs[i, :])
-            i += 1
+            ax_turnover = make_subplots()
 
-            plotting.plot_turnover(returns,
-                                   transactions,
-                                   positions,
-                                   turnover_denom=turnover_denom,
-                                   ax=ax_turnover)
+            ax_txn_timings = make_subplots()
 
-            plotting.plot_txn_time_hist(transactions, ax=ax_txn_timings)
+            ax_turnover = plotting.plot_turnover(returns,
+                                                 transactions,
+                                                 positions,
+                                                 turnover_denom=turnover_denom,
+                                                 fig=ax_turnover)
+            figs.append(ax_turnover)
+            ax_txn_timings = plotting.plot_txn_time_hist(
+                transactions, fig=ax_txn_timings)
+            figs.append(ax_txn_timings)
 
-    for ax in fig.axes:
-        plt.setp(ax.get_xticklabels(), visible=True)
+    for fig in figs:
+        fig.show()
 
 
-@plotting.customize
 def create_returns_tear_sheet(returns, positions=None,
                               transactions=None,
                               live_start_date=None,
@@ -473,6 +476,7 @@ def create_returns_tear_sheet(returns, positions=None,
     return_fig : boolean, optional
         If True, returns the figure that was plotted on.
     """
+    x_min, x_max = returns.index.min(), returns.index.max()
 
     if benchmark_rets is not None:
         returns = utils.clip_returns_to_benchmark(returns, benchmark_rets)
@@ -487,129 +491,129 @@ def create_returns_tear_sheet(returns, positions=None,
 
     plotting.show_worst_drawdown_periods(returns)
 
-    vertical_sections = 11
-
     if live_start_date is not None:
-        vertical_sections += 1
         live_start_date = ep.utils.get_utc_timestamp(live_start_date)
 
+    ax_rolling_returns = make_subplots(1, 1, subplot_titles=['累积收益率'])
+
+    ax_rolling_returns_vol_match = make_subplots(
+        1, 1, subplot_titles=['与基准匹配的累积收益波动率'])
+
+    ax_rolling_returns_log = make_subplots(
+        1, 1, subplot_titles=['对数刻度的累积收益率'])
+
+    ax_returns = make_subplots(
+        1, 1, subplot_titles=['收益率'])
+
     if benchmark_rets is not None:
-        vertical_sections += 1
+        ax_rolling_beta = make_subplots(
+            1, 1, subplot_titles=['滚动β'])
+    else:
+        ax_rolling_beta = None
 
-    if bootstrap:
-        vertical_sections += 1
+    ax_rolling_volatility = make_subplots(1, 1)
 
-    fig = plt.figure(figsize=(14, vertical_sections * 6))
-    gs = gridspec.GridSpec(vertical_sections, 3, wspace=0.5, hspace=0.5)
-    ax_rolling_returns = plt.subplot(gs[:2, :])
+    ax_rolling_sharpe = make_subplots(1, 1)
 
-    i = 2
-    ax_rolling_returns_vol_match = plt.subplot(gs[i, :],
-                                               sharex=ax_rolling_returns)
-    i += 1
-    ax_rolling_returns_log = plt.subplot(gs[i, :],
-                                         sharex=ax_rolling_returns)
-    i += 1
-    ax_returns = plt.subplot(gs[i, :],
-                             sharex=ax_rolling_returns)
-    i += 1
-    if benchmark_rets is not None:
-        ax_rolling_beta = plt.subplot(gs[i, :], sharex=ax_rolling_returns)
-        i += 1
-    ax_rolling_volatility = plt.subplot(gs[i, :], sharex=ax_rolling_returns)
-    i += 1
-    ax_rolling_sharpe = plt.subplot(gs[i, :], sharex=ax_rolling_returns)
-    i += 1
-    ax_drawdown = plt.subplot(gs[i, :], sharex=ax_rolling_returns)
-    i += 1
-    ax_underwater = plt.subplot(gs[i, :], sharex=ax_rolling_returns)
-    i += 1
-    ax_monthly_heatmap = plt.subplot(gs[i, 0])
-    ax_annual_returns = plt.subplot(gs[i, 1])
-    ax_monthly_dist = plt.subplot(gs[i, 2])
-    i += 1
-    ax_return_quantiles = plt.subplot(gs[i, :])
-    i += 1
+    ax_drawdown = make_subplots(1, 1)
 
-    plotting.plot_rolling_returns(
+    ax_underwater = make_subplots(1, 1)
+
+    ax_annual_returns = make_subplots(
+        1, 1, subplot_titles=['年收益率'])
+    ax_monthly_dist = make_subplots(
+        1, 1, subplot_titles=['月收益率分布'])
+
+    ax_return_quantiles = make_subplots(
+        1, 3, subplot_titles=['每日', '每周', '每月'], shared_yaxes=True)
+
+    ax_rolling_returns = plotting.plot_rolling_returns(
         returns,
         factor_returns=benchmark_rets,
         live_start_date=live_start_date,
         cone_std=cone_std,
-        ax=ax_rolling_returns)
-    ax_rolling_returns.set_title(
-        'Cumulative returns')
+        fig=ax_rolling_returns)
 
-    plotting.plot_rolling_returns(
+    ax_rolling_returns_vol_match = plotting.plot_rolling_returns(
         returns,
         factor_returns=benchmark_rets,
         live_start_date=live_start_date,
         cone_std=None,
         volatility_match=(benchmark_rets is not None),
         legend_loc=None,
-        ax=ax_rolling_returns_vol_match)
-    ax_rolling_returns_vol_match.set_title(
-        'Cumulative returns volatility matched to benchmark')
+        fig=ax_rolling_returns_vol_match)
 
-    plotting.plot_rolling_returns(
+    ax_rolling_returns_log = plotting.plot_rolling_returns(
         returns,
         factor_returns=benchmark_rets,
         logy=True,
         live_start_date=live_start_date,
         cone_std=cone_std,
-        ax=ax_rolling_returns_log)
-    ax_rolling_returns_log.set_title(
-        'Cumulative returns on logarithmic scale')
+        fig=ax_rolling_returns_log)
 
-    plotting.plot_returns(
+    ax_returns = plotting.plot_returns(
         returns,
         live_start_date=live_start_date,
-        ax=ax_returns,
+        fig=ax_returns,
     )
-    ax_returns.set_title(
-        'Returns')
 
     if benchmark_rets is not None:
-        plotting.plot_rolling_beta(
-            returns, benchmark_rets, ax=ax_rolling_beta)
+        ax_rolling_beta = plotting.plot_rolling_beta(
+            returns, benchmark_rets, fig=ax_rolling_beta)
 
-    plotting.plot_rolling_volatility(
-        returns, factor_returns=benchmark_rets, ax=ax_rolling_volatility)
+    ax_rolling_volatility = plotting.plot_rolling_volatility(
+        returns, factor_returns=benchmark_rets, fig=ax_rolling_volatility)
 
-    plotting.plot_rolling_sharpe(
-        returns, ax=ax_rolling_sharpe)
+    ax_rolling_sharpe = plotting.plot_rolling_sharpe(
+        returns, fig=ax_rolling_sharpe)
 
     # Drawdowns
-    plotting.plot_drawdown_periods(
-        returns, top=5, ax=ax_drawdown)
+    ax_drawdown = plotting.plot_drawdown_periods(
+        returns, top=5, fig=ax_drawdown)
 
-    plotting.plot_drawdown_underwater(
-        returns=returns, ax=ax_underwater)
+    ax_underwater = plotting.plot_drawdown_underwater(
+        returns, fig=ax_underwater)
+    ax_monthly_heatmap = plotting.plot_monthly_returns_heatmap(returns)
 
-    plotting.plot_monthly_returns_heatmap(returns, ax=ax_monthly_heatmap)
-    plotting.plot_annual_returns(returns, ax=ax_annual_returns)
-    plotting.plot_monthly_returns_dist(returns, ax=ax_monthly_dist)
+    ax_annual_returns = plotting.plot_annual_returns(
+        returns, fig=ax_annual_returns)
 
-    plotting.plot_return_quantiles(
+    ax_monthly_dist = plotting.plot_monthly_returns_dist(
+        returns, fig=ax_monthly_dist)
+
+    ax_return_quantiles = plotting.plot_return_quantiles(
         returns,
         live_start_date=live_start_date,
-        ax=ax_return_quantiles)
+        fig=ax_return_quantiles)
 
     if bootstrap and (benchmark_rets is not None):
-        ax_bootstrap = plt.subplot(gs[i, :])
-        plotting.plot_perf_stats(returns, benchmark_rets,
-                                 ax=ax_bootstrap)
+        ax_bootstrap = make_subplots(1, 1)
+        ax_bootstrap = plotting.plot_perf_stats(returns, benchmark_rets,
+                                                fig=ax_bootstrap)
     elif bootstrap:
         raise ValueError('bootstrap requires passing of benchmark_rets.')
+    else:
+        ax_bootstrap = None
 
-    for ax in fig.axes:
-        plt.setp(ax.get_xticklabels(), visible=True)
+    # for ax in fig.axes:
+    #     plt.setp(ax.get_xticklabels(), visible=True)
+    figs = [ax_rolling_returns, ax_rolling_returns_vol_match,
+            ax_rolling_returns_log, ax_returns, ax_rolling_beta,
+            ax_rolling_volatility, ax_rolling_sharpe,
+            ax_drawdown, ax_underwater]
+    figs = filter(None, figs)
+    for fig in figs:
+        fig.update_xaxes(showticklabels=True, range=[x_min, x_max])
+        fig.show()
+    # 无需共享x轴的图列表
+    figs = [ax_monthly_heatmap, ax_annual_returns,
+            ax_monthly_dist, ax_return_quantiles,
+            ax_bootstrap]
+    figs = filter(None, figs)
+    for fig in figs:
+        fig.show()
 
-    if return_fig:
-        return fig
 
-
-@plotting.customize
 def create_position_tear_sheet(returns, positions,
                                show_and_plot_top_pos=2, hide_positions=False,
                                sector_mappings=None, transactions=None,
@@ -648,44 +652,50 @@ def create_position_tear_sheet(returns, positions,
     return_fig : boolean, optional
         If True, returns the figure that was plotted on.
     """
-
+    figs = []
     positions = utils.check_intraday(estimate_intraday, returns,
                                      positions, transactions)
 
     if hide_positions:
         show_and_plot_top_pos = 0
-    vertical_sections = 7 if sector_mappings is not None else 6
 
-    fig = plt.figure(figsize=(14, vertical_sections * 6))
-    gs = gridspec.GridSpec(vertical_sections, 3, wspace=0.5, hspace=0.5)
-    ax_exposures = plt.subplot(gs[0, :])
-    ax_top_positions = plt.subplot(gs[1, :], sharex=ax_exposures)
-    ax_max_median_pos = plt.subplot(gs[2, :], sharex=ax_exposures)
-    ax_holdings = plt.subplot(gs[3, :], sharex=ax_exposures)
-    ax_long_short_holdings = plt.subplot(gs[4, :])
-    ax_gross_leverage = plt.subplot(gs[5, :], sharex=ax_exposures)
+    # gs = gridspec.GridSpec(vertical_sections, 3, wspace=0.5, hspace=0.5)
+    ax_exposures = make_subplots()  # plt.subplot(gs[0, :])
+    # TODO:sharex=ax_exposures
+    # plt.subplot(gs[1, :], sharex=ax_exposures)
+    ax_top_positions = make_subplots()
+    # plt.subplot(gs[2, :], sharex=ax_exposures)
+    ax_max_median_pos = make_subplots()
+    # plt.subplot(gs[3, :], sharex=ax_exposures)
+    ax_holdings = make_subplots()
+    ax_long_short_holdings = make_subplots()  # plt.subplot(gs[4, :])
+    # plt.subplot(gs[5, :], sharex=ax_exposures)
+    ax_gross_leverage = make_subplots()
+
+    figs.extend([ax_exposures, ax_top_positions, ax_max_median_pos,
+                 ax_holdings, ax_long_short_holdings, ax_gross_leverage])
 
     positions_alloc = pos.get_percent_alloc(positions)
 
-    plotting.plot_exposures(returns, positions, ax=ax_exposures)
+    plotting.plot_exposures(returns, positions, fig=ax_exposures)
 
     plotting.show_and_plot_top_positions(
         returns,
         positions_alloc,
         show_and_plot=show_and_plot_top_pos,
         hide_positions=hide_positions,
-        ax=ax_top_positions)
+        fig=ax_top_positions)
 
     plotting.plot_max_median_position_concentration(positions,
-                                                    ax=ax_max_median_pos)
+                                                    fig=ax_max_median_pos)
 
-    plotting.plot_holdings(returns, positions_alloc, ax=ax_holdings)
+    plotting.plot_holdings(returns, positions_alloc, fig=ax_holdings)
 
     plotting.plot_long_short_holdings(returns, positions_alloc,
-                                      ax=ax_long_short_holdings)
+                                      fig=ax_long_short_holdings)
 
     plotting.plot_gross_leverage(returns, positions,
-                                 ax=ax_gross_leverage)
+                                 fig=ax_gross_leverage)
 
     if sector_mappings is not None:
         sector_exposures = pos.get_sector_exposures(positions,
@@ -693,18 +703,20 @@ def create_position_tear_sheet(returns, positions,
         if len(sector_exposures.columns) > 1:
             sector_alloc = pos.get_percent_alloc(sector_exposures)
             sector_alloc = sector_alloc.drop('cash', axis='columns')
-            ax_sector_alloc = plt.subplot(gs[6, :], sharex=ax_exposures)
+            # ax_sector_alloc = plt.subplot(gs[6, :], sharex=ax_exposures)
+            ax_sector_alloc = make_subplots()
             plotting.plot_sector_allocations(returns, sector_alloc,
-                                             ax=ax_sector_alloc)
-
-    for ax in fig.axes:
-        plt.setp(ax.get_xticklabels(), visible=True)
+                                             fig=ax_sector_alloc)
+            figs.append(ax_sector_alloc)
 
     if return_fig:
-        return fig
+        return figs
+    else:
+        for fig in figs:
+            fig.update_xaxes(range=[returns.index[0], returns.index[-1]])
+            fig.show()
 
 
-@plotting.customize
 def create_txn_tear_sheet(returns, positions, transactions,
                           turnover_denom='AGB', unadjusted_returns=None,
                           estimate_intraday='infer', return_fig=False):
@@ -738,59 +750,68 @@ def create_txn_tear_sheet(returns, positions, transactions,
     return_fig : boolean, optional
         If True, returns the figure that was plotted on.
     """
-
+    figs = []
     positions = utils.check_intraday(estimate_intraday, returns,
                                      positions, transactions)
 
-    vertical_sections = 6 if unadjusted_returns is not None else 4
+    ax_turnover = make_subplots()
+    ax_daily_volume = make_subplots()
+    ax_turnover_hist = make_subplots()
+    ax_txn_timings = make_subplots()
 
-    fig = plt.figure(figsize=(14, vertical_sections * 6))
-    gs = gridspec.GridSpec(vertical_sections, 3, wspace=0.5, hspace=0.5)
-    ax_turnover = plt.subplot(gs[0, :])
-    ax_daily_volume = plt.subplot(gs[1, :], sharex=ax_turnover)
-    ax_turnover_hist = plt.subplot(gs[2, :])
-    ax_txn_timings = plt.subplot(gs[3, :])
-
-    plotting.plot_turnover(
+    ax_turnover = plotting.plot_turnover(
         returns,
         transactions,
         positions,
         turnover_denom=turnover_denom,
-        ax=ax_turnover)
-
-    plotting.plot_daily_volume(returns, transactions, ax=ax_daily_volume)
-
+        fig=ax_turnover)
+    figs.append(ax_turnover)
+    ax_daily_volume = plotting.plot_daily_volume(
+        returns, transactions, fig=ax_daily_volume)
+    figs.append(ax_daily_volume)
     try:
-        plotting.plot_daily_turnover_hist(transactions,
-                                          positions,
-                                          turnover_denom=turnover_denom,
-                                          ax=ax_turnover_hist)
+        ax_turnover_hist = plotting.plot_daily_turnover_hist(transactions,
+                                                             positions,
+                                                             turnover_denom=turnover_denom,
+                                                             fig=ax_turnover_hist)
+        figs.append(ax_turnover_hist)
     except ValueError:
         warnings.warn('Unable to generate turnover plot.', UserWarning)
 
-    plotting.plot_txn_time_hist(transactions, ax=ax_txn_timings)
-
+    ax_txn_timings = plotting.plot_txn_time_hist(
+        transactions, fig=ax_txn_timings)
+    figs.append(ax_txn_timings)
     if unadjusted_returns is not None:
-        ax_slippage_sweep = plt.subplot(gs[4, :])
-        plotting.plot_slippage_sweep(unadjusted_returns,
-                                     positions,
-                                     transactions,
-                                     ax=ax_slippage_sweep
-                                     )
-        ax_slippage_sensitivity = plt.subplot(gs[5, :])
-        plotting.plot_slippage_sensitivity(unadjusted_returns,
-                                           positions,
-                                           transactions,
-                                           ax=ax_slippage_sensitivity
-                                           )
-    for ax in fig.axes:
-        plt.setp(ax.get_xticklabels(), visible=True)
+        ax_slippage_sweep = make_subplots()
+        ax_slippage_sweep = plotting.plot_slippage_sweep(unadjusted_returns,
+                                                         positions,
+                                                         transactions,
+                                                         fig=ax_slippage_sweep
+                                                         )
+        figs.append(ax_slippage_sweep)
+        ax_slippage_sensitivity = make_subplots()
+        ax_slippage_sensitivity = plotting.plot_slippage_sensitivity(unadjusted_returns,
+                                                                     positions,
+                                                                     transactions,
+                                                                     fig=ax_slippage_sensitivity
+                                                                     )
+        figs.append(ax_slippage_sensitivity)
+    else:
+        ax_slippage_sweep = None
 
     if return_fig:
-        return fig
+        return figs
+    else:
+        figs = filter(None, figs)
+        shared_x_figs = [ax_turnover, ax_daily_volume]
+        if ax_slippage_sweep:
+            shared_x_figs.append(ax_slippage_sweep)
+        for fig in shared_x_figs:
+            fig.update_xaxes(range=[returns.index[0], returns.index[-1]])
+        for fig in figs:
+            fig.show()
 
 
-@plotting.customize
 def create_round_trip_tear_sheet(returns, positions, transactions,
                                  sector_mappings=None,
                                  estimate_intraday='infer', return_fig=False):
@@ -821,7 +842,7 @@ def create_round_trip_tear_sheet(returns, positions, transactions,
     return_fig : boolean, optional
         If True, returns the figure that was plotted on.
     """
-
+    figs = []
     positions = utils.check_intraday(estimate_intraday, returns,
                                      positions, transactions)
 
@@ -848,39 +869,54 @@ def create_round_trip_tear_sheet(returns, positions, transactions,
             trades, sector_mappings)
         plotting.show_profit_attribution(sector_trades)
 
-    fig = plt.figure(figsize=(14, 3 * 6))
+    ax_trade_lifetimes = make_subplots()
+    fig_1 = make_subplots(1, 2)
+    fig_2 = make_subplots(1, 2)
 
-    gs = gridspec.GridSpec(3, 2, wspace=0.5, hspace=0.5)
+    ax_trade_lifetimes = plotting.plot_round_trip_lifetimes(
+        trades, fig=ax_trade_lifetimes)
+    figs.append(ax_trade_lifetimes)
 
-    ax_trade_lifetimes = plt.subplot(gs[0, :])
-    ax_prob_profit_trade = plt.subplot(gs[1, 0])
-    ax_holding_time = plt.subplot(gs[1, 1])
-    ax_pnl_per_round_trip_dollars = plt.subplot(gs[2, 0])
-    ax_pnl_per_round_trip_pct = plt.subplot(gs[2, 1])
-
-    plotting.plot_round_trip_lifetimes(trades, ax=ax_trade_lifetimes)
-
-    plotting.plot_prob_profit_trade(trades, ax=ax_prob_profit_trade)
+    fig_1 = plotting.plot_prob_profit_trade(trades, fig=fig_1, col=1)
 
     trade_holding_times = [x.days for x in trades['duration']]
-    sns.distplot(trade_holding_times, kde=False, ax=ax_holding_time)
-    ax_holding_time.set(xlabel='Holding time in days')
 
-    sns.distplot(trades.pnl, kde=False, ax=ax_pnl_per_round_trip_dollars)
-    ax_pnl_per_round_trip_dollars.set(xlabel='PnL per round-trip trade in $')
+    fig_1.add_trace(go.Histogram(x=trade_holding_times), row=1, col=2)
+    fig_1.update_xaxes(
+        title_text='持有时间(天)',
+        row=1, col=2,
+    )
+    fig_1.update_yaxes(
+        tickformat='.2f',
+        row=1, col=2,
+    )
+    fig_1.update_layout(showlegend=False)
+    figs.append(fig_1)
 
-    sns.distplot(trades.returns.dropna() * 100, kde=False,
-                 ax=ax_pnl_per_round_trip_pct)
-    ax_pnl_per_round_trip_pct.set(
-        xlabel='Round-trip returns in %')
+    fig_2.add_trace(go.Histogram(x=trades.pnl), row=1, col=1)
+    fig_2.update_xaxes(
+        title_text='每回交易盈亏额(RMB)',
+        row=1, col=1,
+    )
 
-    gs.tight_layout(fig)
+    fig_2.add_trace(go.Histogram(
+        x=trades.returns.dropna()), row=1, col=2)
+    fig_2.update_xaxes(
+        title_text='每回交易盈亏率(%)',
+        tickformat='%',
+        row=1, col=2,
+    )
+    fig_2.update_layout(showlegend=False)
+
+    figs.append(fig_2)
 
     if return_fig:
-        return fig
+        return figs
+    else:
+        for fig in figs:
+            fig.show()
 
 
-@plotting.customize
 def create_interesting_times_tear_sheet(returns, benchmark_rets=None,
                                         periods=None, legend_loc='best',
                                         return_fig=False):
@@ -924,7 +960,7 @@ def create_interesting_times_tear_sheet(returns, benchmark_rets=None,
     utils.print_table(pd.DataFrame(rets_interesting)
                       .describe().transpose()
                       .loc[:, ['mean', 'min', 'max']] * 100,
-                      name='Stress Events',
+                      name='压力事件',
                       float_format='{0:.2f}%'.format)
 
     if benchmark_rets is not None:
@@ -933,38 +969,57 @@ def create_interesting_times_tear_sheet(returns, benchmark_rets=None,
         bmark_interesting = timeseries.extract_interesting_date_ranges(
             benchmark_rets, periods)
 
-    num_plots = len(rets_interesting)
-    # 2 plots, 1 row; 3 plots, 2 rows; 4 plots, 2 rows; etc.
-    num_rows = int((num_plots + 1) / 2.0)
-    fig = plt.figure(figsize=(14, num_rows * 6.0))
-    gs = gridspec.GridSpec(num_rows, 2, wspace=0.5, hspace=0.5)
-
-    for i, (name, rets_period) in enumerate(rets_interesting.items()):
-        # i=0 -> 0, i=1 -> 0, i=2 -> 1 ;; i=0 -> 0, i=1 -> 1, i=2 -> 0
-        ax = plt.subplot(gs[int(i / 2.0), i % 2])
-
-        ep.cum_returns(rets_period).plot(
-            ax=ax, color='forestgreen', label='algo', alpha=0.7, lw=2)
-
-        if benchmark_rets is not None:
-            ep.cum_returns(bmark_interesting[name]).plot(
-                ax=ax, color='gray', label='benchmark', alpha=0.6)
-            ax.legend(['Algo',
-                       'benchmark'],
-                      loc=legend_loc, frameon=True, framealpha=0.5)
-        else:
-            ax.legend(['Algo'],
-                      loc=legend_loc, frameon=True, framealpha=0.5)
-
-        ax.set_title(name)
-        ax.set_ylabel('Returns')
-        ax.set_xlabel('')
-
+    names = list(rets_interesting.keys())
+    figs = []
+    for i in range(0, len(names), 2):
+        subplot_titles = names[i:i + 2]
+        fig = make_subplots(
+            rows=1, cols=2, shared_yaxes=True, subplot_titles=subplot_titles)
+        figs.append(fig)
+        batch = names[i:i+2]
+        for col, name in enumerate(batch, 1):
+            rets_period = rets_interesting[name]
+            cum_returns = ep.cum_returns(rets_period)
+            fig.add_trace(
+                go.Scatter(x=cum_returns.index,
+                           y=cum_returns.values,
+                           mode='lines',
+                           showlegend=True if col == 1 else False,
+                           name='策略',
+                           opacity=0.70,
+                           line=dict(color='forestgreen', width=2)),
+                row=1, col=col,
+            )
+            if benchmark_rets is not None:
+                bmark = ep.cum_returns(bmark_interesting[name])
+                fig.add_trace(
+                    go.Scatter(x=bmark.index, y=bmark.values,
+                               mode='lines',
+                               showlegend=True if col == 1 else False,
+                               name='基准',
+                               opacity=0.60,
+                               line=dict(color='gray', width=2)),
+                    row=1, col=col,
+                )
     if return_fig:
-        return fig
+        return figs
+    else:
+        for fig in figs:
+            fig.update_yaxes(title_text='收益率')
+            fig.update_layout(yaxis_tickformat='%')
+            fig.update_layout(
+                legend=dict(
+                    x=0.01,
+                    y=0.99,
+                    yanchor="top",
+                    xanchor="left",
+                )
+            )
+            for col in [1, 2]:
+                utils._date_tickformat(fig, col=col)
+            fig.show()
 
 
-@plotting.customize
 def create_capacity_tear_sheet(returns, positions, transactions,
                                market_data,
                                liquidation_daily_vol_limit=0.2,
@@ -1016,11 +1071,11 @@ def create_capacity_tear_sheet(returns, positions, transactions,
     positions = utils.check_intraday(estimate_intraday, returns,
                                      positions, transactions)
 
-    print("Max days to liquidation is computed for each traded name "
-          "assuming a 20% limit on daily bar consumption \n"
-          "and trailing 5 day mean volume as the available bar volume.\n\n"
-          "Tickers with >1 day liquidation time at a"
-          " constant $1m capital base:")
+    print("计算每个交易名称的最大清算天数\n\n"
+          "假设：\n"
+          "\t1. 限定20%的日线量\n"
+          "\t2. 尾部5天平均成交量为可用量\n"
+          "\t3. 清算大于1天的初始资本为1百万元")
 
     max_days_by_ticker = capacity.get_max_days_to_liquidate_by_ticker(
         positions, market_data,
@@ -1029,8 +1084,9 @@ def create_capacity_tear_sheet(returns, positions, transactions,
         mean_volume_window=5)
     max_days_by_ticker.index = (
         max_days_by_ticker.index.map(utils.format_asset))
-
-    print("Whole backtest:")
+    print()
+    print(f"{'='*30}整个回测{'='*30}")
+    print()
     utils.print_table(
         max_days_by_ticker[max_days_by_ticker.days_to_liquidate >
                            days_to_liquidate_limit])
@@ -1043,40 +1099,46 @@ def create_capacity_tear_sheet(returns, positions, transactions,
         last_n_days=last_n_days)
     max_days_by_ticker_lnd.index = (
         max_days_by_ticker_lnd.index.map(utils.format_asset))
-
-    print("Last {} trading days:".format(last_n_days))
+    print()
+    print(f"最近{last_n_days}个交易日")
+    print()
     utils.print_table(
         max_days_by_ticker_lnd[max_days_by_ticker_lnd.days_to_liquidate > 1])
 
     llt = capacity.get_low_liquidity_transactions(transactions, market_data)
     llt.index = llt.index.map(utils.format_asset)
 
-    print('Tickers with daily transactions consuming >{}% of daily bar \n'
-          'all backtest:'.format(trade_daily_vol_limit * 100))
+    factor = trade_daily_vol_limit * 100
+    print()
+    print(f'所有回测中，股票超过当日成交量的{factor}%清单')
+    print()
     utils.print_table(
         llt[llt['max_pct_bar_consumed'] > trade_daily_vol_limit * 100])
 
     llt = capacity.get_low_liquidity_transactions(
         transactions, market_data, last_n_days=last_n_days)
 
-    print("Last {} trading days:".format(last_n_days))
+    print()
+    print(f"最近{last_n_days}个交易日")
+    print()
     utils.print_table(
         llt[llt['max_pct_bar_consumed'] > trade_daily_vol_limit * 100])
 
     bt_starting_capital = positions.iloc[0].sum() / (1 + returns.iloc[0])
-    fig, ax_capacity_sweep = plt.subplots(figsize=(14, 6))
+    fig = make_subplots()
     plotting.plot_capacity_sweep(returns, transactions, market_data,
                                  bt_starting_capital,
                                  min_pv=100000,
                                  max_pv=300000000,
                                  step_size=1000000,
-                                 ax=ax_capacity_sweep)
+                                 fig=fig)
 
     if return_fig:
         return fig
+    else:
+        fig.show()
 
 
-@plotting.customize
 def create_perf_attrib_tear_sheet(returns,
                                   positions,
                                   factor_returns,
@@ -1129,7 +1191,7 @@ def create_perf_attrib_tear_sheet(returns,
         pos_in_dollars=pos_in_dollars
     )
 
-    display(Markdown("## Performance Relative to Common Risk Factors"))
+    display(Markdown("## 相对于共同风险因子的绩效"))
 
     # aggregate perf attrib stats and show summary table
     perf_attrib.show_perf_attrib_stats(returns, positions, factor_returns,
@@ -1144,16 +1206,11 @@ def create_perf_attrib_tear_sheet(returns,
         vertical_sections = 1 + 2
 
     current_section = 0
-
-    fig = plt.figure(figsize=[14, vertical_sections * 6])
-
-    gs = gridspec.GridSpec(vertical_sections, 1,
-                           wspace=0.5, hspace=0.5)
+    figs = [make_subplots() for _ in range(vertical_sections)]
 
     perf_attrib.plot_returns(perf_attrib_data,
-                             ax=plt.subplot(gs[current_section]))
+                             fig=figs[current_section])
     current_section += 1
-
     if factor_partitions is not None:
 
         for factor_type, partitions in factor_partitions.items():
@@ -1164,10 +1221,10 @@ def create_perf_attrib_tear_sheet(returns,
 
             perf_attrib.plot_factor_contribution_to_perf(
                 perf_attrib_data[columns_to_select],
-                ax=plt.subplot(gs[current_section]),
+                fig=figs[current_section],
                 title=(
-                    'Cumulative common {} returns attribution'
-                ).format(factor_type)
+                    f'累积共同 {factor_type} 收益率归因'
+                )
             )
             current_section += 1
 
@@ -1179,8 +1236,8 @@ def create_perf_attrib_tear_sheet(returns,
 
             perf_attrib.plot_risk_exposures(
                 portfolio_exposures[columns_to_select],
-                ax=plt.subplot(gs[current_section]),
-                title='Daily {} factor exposures'.format(factor_type)
+                fig=figs[current_section],
+                title='每日 {} 因子敞口'.format(factor_type)
             )
             current_section += 1
 
@@ -1188,16 +1245,19 @@ def create_perf_attrib_tear_sheet(returns,
 
         perf_attrib.plot_factor_contribution_to_perf(
             perf_attrib_data,
-            ax=plt.subplot(gs[current_section])
+            fig=figs[current_section]
         )
         current_section += 1
 
         perf_attrib.plot_risk_exposures(
             portfolio_exposures,
-            ax=plt.subplot(gs[current_section])
+            fig=figs[current_section]
         )
 
     # gs.tight_layout(fig)
 
     if return_fig:
-        return fig
+        return figs
+    else:
+        for fig in figs:
+            fig.show()
