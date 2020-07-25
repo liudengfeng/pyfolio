@@ -283,6 +283,7 @@ def plot_holdings(returns, positions, legend_loc='best', fig=None, **kwargs):
             xanchor="left",
         )
     )
+    _date_tickformat(fig)
     return fig
 
 
@@ -351,6 +352,7 @@ def plot_long_short_holdings(returns, positions,
             xanchor="left",
         )
     )
+    _date_tickformat(fig)
     return fig
 
 
@@ -1233,6 +1235,7 @@ def plot_gross_leverage(returns, positions, fig=None, **kwargs):
 
     fig.update_yaxes(title_text='总杠杆', tickformat='.2f')
     fig.update_layout(title_text='总杠杆', showlegend=False)
+    _date_tickformat(fig)
     return fig
 
 
@@ -1379,6 +1382,7 @@ def show_and_plot_top_positions(returns, positions_alloc,
             fig.update_layout(showlegend=False)
         fig.update_layout(title_text=title)
         fig.update_yaxes(title_text='持有风险敞口', tickformat='%')
+        _date_tickformat(fig)
         return fig
 
 
@@ -1425,6 +1429,7 @@ def plot_max_median_position_concentration(positions, fig=None, **kwargs):
             xanchor="left",
         )
     )
+    _date_tickformat(fig)
     return fig
 
 
