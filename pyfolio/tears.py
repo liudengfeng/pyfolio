@@ -42,7 +42,7 @@ FACTOR_PARTITIONS = {
                'technology']
 }
 
-plotly.offline.init_notebook_mode(connected=True)
+# plotly.offline.init_notebook_mode(connected=True)
 
 
 def timer(msg_body, previous_time):

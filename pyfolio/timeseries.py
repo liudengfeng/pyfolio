@@ -1006,14 +1006,14 @@ def gen_drawdown_table(returns, top=10):
                                                             recovery,
                                                             freq='B'))
         df_drawdowns.loc[i, '波峰日期'] = (peak.to_pydatetime()
-                                       .strftime('%Y-%m-%d'))
+                                       .strftime(r'%Y-%m-%d'))
         df_drawdowns.loc[i, '波谷日期'] = (valley.to_pydatetime()
-                                       .strftime('%Y-%m-%d'))
+                                       .strftime(r'%Y-%m-%d'))
         if isinstance(recovery, float):
             df_drawdowns.loc[i, '恢复日期'] = recovery
         else:
             df_drawdowns.loc[i, '恢复日期'] = (recovery.to_pydatetime()
-                                           .strftime('%Y-%m-%d'))
+                                           .strftime(r'%Y-%m-%d'))
         df_drawdowns.loc[i, '净回撤百分比%'] = (
             (df_cum.loc[peak] - df_cum.loc[valley]) / df_cum.loc[peak]) * 100
 

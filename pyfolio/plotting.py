@@ -634,7 +634,7 @@ def show_perf_stats(returns, factor_returns=None, positions=None,
         for stat, value in perf_stats[column].iteritems():
             if stat in STAT_FUNCS_PCT:
                 perf_stats.loc[stat, column] = str(np.round(value * 100,
-                                                            3)) + '%'
+                                                            2)) + '%'
     if header_rows is None:
         header_rows = date_rows
     else:

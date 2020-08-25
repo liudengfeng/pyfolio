@@ -23,15 +23,15 @@ import numpy as np
 from .utils import print_table, format_asset
 
 PNL_STATS = OrderedDict(
-    [('盈亏总计', lambda x: x.sum()),
-     ('收益合计', lambda x: x[x > 0].sum()),
-     ('亏损合计', lambda x: x[x < 0].sum()),
+    [('净收益', lambda x: x.sum()),
+     ('其中：盈利合计', lambda x: x[x > 0].sum()),
+     ('其中：亏损合计', lambda x: x[x < 0].sum()),
      ('盈亏次数比率', lambda x: x[x > 0].sum() / x[x < 0].abs().sum()
       if x[x < 0].abs().sum() != 0 else np.nan),
-     ('盈亏平均值', 'mean'),
-     ('盈利平均值', lambda x: x[x > 0].mean()),
-     ('亏损平均值', lambda x: x[x < 0].mean()),
-     ('盈亏平均值比率', lambda x: x[x > 0].mean() /
+     ('净收益平均值', 'mean'),
+     ('盈利交易平均值', lambda x: x[x > 0].mean()),
+     ('亏损交易平均值', lambda x: x[x < 0].mean()),
+     ('盈利与亏损平均值比率', lambda x: x[x > 0].mean() /
       x[x < 0].abs().mean() if x[x < 0].abs().mean() != 0 else np.nan),
      ('交易最大盈利', 'max'),
      ('交易最大亏损', 'min'),
@@ -39,7 +39,7 @@ PNL_STATS = OrderedDict(
 
 SUMMARY_STATS = OrderedDict(
     [('交易总回数', 'count'),
-     ('盈利次数百分比', lambda x: len(x[x > 0]) / float(len(x))),
+     ('盈利概率', lambda x: len(x[x > 0]) / float(len(x))),
      ('盈利回数', lambda x: len(x[x > 0])),
      ('亏损回数', lambda x: len(x[x < 0])),
      ('持平回数', lambda x: len(x[x == 0])),
@@ -57,7 +57,7 @@ RETURN_STATS = OrderedDict(
      ])
 
 DURATION_STATS = OrderedDict(
-    [('持续时间平均', lambda x: x.mean()),
+    [('持续时间平均', lambda x: x.mean().round('s')),
      ('持续时间中位数', lambda x: x.median()),
      ('最长持续时间', lambda x: x.max()),
      ('最短持续时间', lambda x: x.min())
