@@ -152,11 +152,11 @@ class PerfAttribTestCase(unittest.TestCase):
                                                               factor_returns,
                                                               factor_loadings)
 
-        pd.util.testing.assert_frame_equal(expected_perf_attrib_output,
-                                           perf_attrib_output)
+        pd.testing.assert_frame_equal(expected_perf_attrib_output,
+                                      perf_attrib_output, check_freq=False)
 
-        pd.util.testing.assert_frame_equal(expected_exposures_portfolio,
-                                           exposures_portfolio)
+        pd.testing.assert_frame_equal(expected_exposures_portfolio,
+                                      exposures_portfolio, check_freq=False)
 
         # test long and short positions
         positions = pd.DataFrame(index=dts,
@@ -190,28 +190,29 @@ class PerfAttribTestCase(unittest.TestCase):
                   'risk_factor2': [0.0, 0.0]}
         )
 
-        pd.util.testing.assert_frame_equal(expected_perf_attrib_output,
-                                           perf_attrib_output)
+        pd.testing.assert_frame_equal(expected_perf_attrib_output,
+                                      perf_attrib_output, check_freq=False)
 
-        pd.util.testing.assert_frame_equal(expected_exposures_portfolio,
-                                           exposures_portfolio)
+        pd.testing.assert_frame_equal(expected_exposures_portfolio,
+                                      exposures_portfolio, check_freq=False)
 
         perf_attrib_summary, exposures_summary = create_perf_attrib_stats(
             perf_attrib_output, exposures_portfolio
         )
 
-        self.assertEqual(perf_attrib_summary['Annualized Specific Return'],
-                         perf_attrib_summary['Annualized Total Return'])
+        self.assertEqual(perf_attrib_summary['年化特定收益率'],
+                         perf_attrib_summary['年化总收益率'])
 
-        self.assertEqual(perf_attrib_summary['Cumulative Specific Return'],
-                         perf_attrib_summary['Total Returns'])
+        self.assertEqual(perf_attrib_summary['累积特定收益率'],
+                         perf_attrib_summary['总收益率'])
 
-        pd.util.testing.assert_frame_equal(
+        pd.testing.assert_frame_equal(
             exposures_summary,
             pd.DataFrame(0.0, index=['risk_factor1', 'risk_factor2'],
-                         columns=['Average Risk Factor Exposure',
-                                  'Annualized Return',
-                                  'Cumulative Return'])
+                         columns=['因子平均风险敞口',
+                                  '年化收益率',
+                                  '累积收益率']),
+            check_freq=False
         )
 
     def test_perf_attrib_regression(self):
@@ -257,16 +258,16 @@ class PerfAttribTestCase(unittest.TestCase):
 
         # since all returns are factor returns, common returns should be
         # equivalent to total returns, and specific returns should be 0
-        pd.util.testing.assert_series_equal(returns,
-                                            common_returns,
-                                            check_names=False)
+        pd.testing.assert_series_equal(returns,
+                                       common_returns,
+                                       check_names=False)
 
         self.assertTrue(np.isclose(specific_returns, 0).all())
 
         # specific and common returns combined should equal total returns
-        pd.util.testing.assert_series_equal(returns,
-                                            combined_returns,
-                                            check_names=False)
+        pd.testing.assert_series_equal(returns,
+                                       combined_returns,
+                                       check_names=False)
 
         # check that residuals + intercepts = specific returns
         self.assertTrue(np.isclose((residuals + intercepts), 0).all())
@@ -276,13 +277,13 @@ class PerfAttribTestCase(unittest.TestCase):
             factor_returns, axis='rows'
         ).sum(axis='columns')
 
-        pd.util.testing.assert_series_equal(expected_common_returns,
-                                            common_returns,
-                                            check_names=False)
+        pd.testing.assert_series_equal(expected_common_returns,
+                                       common_returns,
+                                       check_names=False)
 
         # since factor loadings are ones, portfolio risk exposures
         # should be ones
-        pd.util.testing.assert_frame_equal(
+        pd.testing.assert_frame_equal(
             risk_exposures_portfolio,
             pd.DataFrame(np.ones_like(risk_exposures_portfolio),
                          index=risk_exposures_portfolio.index,
@@ -294,56 +295,56 @@ class PerfAttribTestCase(unittest.TestCase):
         )
 
         self.assertEqual(ep.annual_return(specific_returns),
-                         perf_attrib_summary['Annualized Specific Return'])
+                         perf_attrib_summary['年化特定收益率'])
 
         self.assertEqual(ep.annual_return(common_returns),
-                         perf_attrib_summary['Annualized Common Return'])
+                         perf_attrib_summary['年化共同收益率'])
 
         self.assertEqual(ep.annual_return(combined_returns),
-                         perf_attrib_summary['Annualized Total Return'])
+                         perf_attrib_summary['年化总收益率'])
 
         self.assertEqual(ep.sharpe_ratio(specific_returns),
-                         perf_attrib_summary['Specific Sharpe Ratio'])
+                         perf_attrib_summary['特定夏普比率'])
 
         self.assertEqual(ep.cum_returns_final(specific_returns),
-                         perf_attrib_summary['Cumulative Specific Return'])
+                         perf_attrib_summary['累积特定收益率'])
 
         self.assertEqual(ep.cum_returns_final(common_returns),
-                         perf_attrib_summary['Cumulative Common Return'])
+                         perf_attrib_summary['累积共同收益率'])
 
         self.assertEqual(ep.cum_returns_final(combined_returns),
-                         perf_attrib_summary['Total Returns'])
+                         perf_attrib_summary['总收益率'])
 
         avg_factor_exposure = risk_exposures_portfolio.mean().rename(
-            'Average Risk Factor Exposure'
+            '因子平均风险敞口'
         )
-        pd.util.testing.assert_series_equal(
+        pd.testing.assert_series_equal(
             avg_factor_exposure,
-            exposures_summary['Average Risk Factor Exposure']
+            exposures_summary['因子平均风险敞口']
         )
 
         cumulative_returns_by_factor = pd.Series(
             [ep.cum_returns_final(perf_attrib_output[c])
              for c in risk_exposures_portfolio.columns],
-            name='Cumulative Return',
+            name='累积收益率',
             index=risk_exposures_portfolio.columns
         )
 
-        pd.util.testing.assert_series_equal(
+        pd.testing.assert_series_equal(
             cumulative_returns_by_factor,
-            exposures_summary['Cumulative Return']
+            exposures_summary['累积收益率']
         )
 
         annualized_returns_by_factor = pd.Series(
             [ep.annual_return(perf_attrib_output[c])
              for c in risk_exposures_portfolio.columns],
-            name='Annualized Return',
+            name='年化收益率',
             index=risk_exposures_portfolio.columns
         )
 
-        pd.util.testing.assert_series_equal(
+        pd.testing.assert_series_equal(
             annualized_returns_by_factor,
-            exposures_summary['Annualized Return']
+            exposures_summary['年化收益率']
         )
 
     def test_missing_stocks_and_dates(self):
@@ -479,14 +480,14 @@ class PerfAttribTestCase(unittest.TestCase):
 
         expected_returns = pd.Series([0.1, 0.21, 0.331],
                                      index=returns.index)
-        pd.util.testing.assert_series_equal(
+        pd.testing.assert_series_equal(
             expected_returns,
             _cumulative_returns_less_costs(returns, None)
         )
 
         expected_returns = pd.Series([0.099000, 0.207801, 0.327373],
                                      index=returns.index)
-        pd.util.testing.assert_series_equal(
+        pd.testing.assert_series_equal(
             expected_returns,
             _cumulative_returns_less_costs(returns, cost)
         )

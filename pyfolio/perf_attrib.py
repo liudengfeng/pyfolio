@@ -14,7 +14,7 @@
 # limitations under the License.
 from __future__ import division
 import warnings
-
+import numpy as np
 from collections import OrderedDict
 import empyrical as ep
 import pandas as pd
@@ -25,6 +25,7 @@ from .txn import get_turnover
 from .utils import print_table, _date_tickformat, configure_legend
 
 PERF_ATTRIB_TURNOVER_THRESHOLD = 0.25
+np.seterr(divide='ignore', invalid='ignore')
 
 
 def perf_attrib(returns,
@@ -253,7 +254,7 @@ def create_perf_attrib_stats(perf_attrib, risk_exposures):
     risk_exposure_summary = pd.DataFrame(
         data=OrderedDict([
             (
-                '平均风险敞口',
+                '因子平均风险敞口',
                 risk_exposures.mean(axis='rows')
             ),
             ('年化收益率', annualized_returns_by_factor),
@@ -316,7 +317,7 @@ def show_perf_attrib_stats(returns,
         # In exposures table, format exposure column to 2 decimal places, and
         # return columns  as percentages.
         formatters={
-            '平均风险敞口': float_formatter,
+            '因子平均风险敞口': float_formatter,
             '年化收益率': percentage_formatter,
             '累积收益率': percentage_formatter,
         },
@@ -468,7 +469,7 @@ def plot_alpha_returns(alpha_returns, fig=None):
             )
         )
     )
-    
+
     fig.update_layout(title_text=title)
     configure_legend(fig, autofmt_xdate=False)
 

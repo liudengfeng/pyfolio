@@ -68,20 +68,20 @@ class TestDrawdown(TestCase):
 
         self.assertEqual(np.round(drawdowns.loc[0, '净回撤百分比%']),
                          first_net_drawdown)
-        self.assertEqual(drawdowns.loc[0, 'Peak date'],
+        self.assertEqual(drawdowns.loc[0, '波峰日期'],
                          first_expected_peak)
-        self.assertEqual(drawdowns.loc[0, 'Valley date'],
+        self.assertEqual(drawdowns.loc[0, '波谷日期'],
                          first_expected_valley)
-        self.assertEqual(drawdowns.loc[0, 'Recovery date'],
+        self.assertEqual(drawdowns.loc[0, '恢复日期'],
                          first_expected_recovery)
 
         self.assertEqual(np.round(drawdowns.loc[1, '净回撤百分比%']),
                          second_net_drawdown)
-        self.assertEqual(drawdowns.loc[1, 'Peak date'],
+        self.assertEqual(drawdowns.loc[1, '波峰日期'],
                          second_expected_peak)
-        self.assertEqual(drawdowns.loc[1, 'Valley date'],
+        self.assertEqual(drawdowns.loc[1, '波谷日期'],
                          second_expected_valley)
-        self.assertTrue(pd.isnull(drawdowns.loc[1, 'Recovery date']))
+        self.assertTrue(pd.isnull(drawdowns.loc[1, '恢复日期']))
 
     px_list_1 = np.array(
         [100, 120, 100, 80, 70, 110, 180, 150]) / 100.  # Simple
@@ -146,25 +146,25 @@ class TestDrawdown(TestCase):
             pd.isnull(
                 drawdowns.loc[
                     0,
-                    'Peak date'])) if expected_peak is None \
-            else self.assertEqual(drawdowns.loc[0, 'Peak date'],
+                    '波峰日期'])) if expected_peak is None \
+            else self.assertEqual(drawdowns.loc[0, '波峰日期'],
                                   expected_peak)
         self.assertTrue(
             pd.isnull(
-                drawdowns.loc[0, 'Valley date'])) \
+                drawdowns.loc[0, '波谷日期'])) \
             if expected_valley is None else self.assertEqual(
-                drawdowns.loc[0, 'Valley date'],
+                drawdowns.loc[0, '波谷日期'],
                 expected_valley)
         self.assertTrue(
             pd.isnull(
-                drawdowns.loc[0, 'Recovery date'])) \
+                drawdowns.loc[0, '恢复日期'])) \
             if expected_recovery is None else self.assertEqual(
-                drawdowns.loc[0, 'Recovery date'],
+                drawdowns.loc[0, '恢复日期'],
                 expected_recovery)
         self.assertTrue(
-            pd.isnull(drawdowns.loc[0, 'Duration'])) \
+            pd.isnull(drawdowns.loc[0, '持续时间'])) \
             if expected_duration is None else self.assertEqual(
-                drawdowns.loc[0, 'Duration'], expected_duration)
+                drawdowns.loc[0, '持续时间'], expected_duration)
 
     def test_drawdown_overlaps(self):
         rand = np.random.RandomState(1337)
@@ -175,11 +175,11 @@ class TestDrawdown(TestCase):
         )
         spy_drawdowns = timeseries.gen_drawdown_table(
             spy_returns,
-            top=20).sort_values(by='Peak date')
-        # Compare the recovery date of each drawdown with the peak of the next
+            top=20).sort_values(by='波峰日期')
+        # Compare the 恢复日期 of each drawdown with the peak of the next
         # Last pair might contain a NaT if drawdown didn't finish, so ignore it
-        pairs = list(zip(spy_drawdowns['Recovery date'],
-                         spy_drawdowns['Peak date'].shift(-1)))[:-1]
+        pairs = list(zip(spy_drawdowns['恢复日期'],
+                         spy_drawdowns['波峰日期'].shift(-1)))[:-1]
         self.assertGreater(len(pairs), 0)
         for recovery, peak in pairs:
             if not pd.isnull(recovery):
